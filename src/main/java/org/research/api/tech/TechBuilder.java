@@ -1,0 +1,65 @@
+package org.research.api.tech;
+
+import com.alessandro.astages.core.stage.AStage;
+import com.alessandro.astages.core.stage.AStageManager;
+import com.alessandro.astages.util.ARestrictionType;
+import net.minecraft.resources.ResourceLocation;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+
+public class TechBuilder {
+
+    private TechBuilder(){}
+
+
+//    public @Nullable ResourceLocation identifier;
+
+    public @Nullable ARestrictionType restriction;
+
+    public @Nullable AStage stage;
+    public List<ResourceLocation> parent = new ArrayList<>();
+    public List<ResourceLocation> child = new ArrayList<>();
+
+
+    public static TechBuilder Builder(){
+        return new TechBuilder();
+    }
+
+
+//    public TechBuilder setIdentifier(ResourceLocation identifier) {
+//        this.identifier = identifier;
+//        return this;
+//    }
+
+    public TechBuilder addStage(String stage) {
+        this.stage = new AStage(stage);
+        return this;
+    }
+
+    public TechBuilder setRestriction(ARestrictionType restriction) {
+        this.restriction = restriction;
+
+        return this;
+    }
+
+    public void addChild(ResourceLocation child) {
+        this.child.add(child);
+    }
+
+    public void addParent(ResourceLocation parent) {
+        this.parent.add(parent);
+    }
+
+    public TechBuilder builder(){
+        if (!validate()){
+            throw new RuntimeException("You didn't define all config attributes!");
+        }
+        return this;
+    }
+
+    private boolean validate(){
+        return stage != null && restriction != null;
+    }
+}
