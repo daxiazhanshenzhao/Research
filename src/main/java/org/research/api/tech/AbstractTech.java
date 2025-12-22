@@ -49,7 +49,7 @@ public abstract class AbstractTech {
     }
 
 
-    public abstract TechBuilder getTechBuilder(TechBuilder builder);
+    public abstract TechBuilder getTechBuilder();
 
     public abstract void eventHandle(Event event);
 

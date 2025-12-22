@@ -13,7 +13,7 @@ public class EmptyTech extends AbstractTech{
     }
 
     @Override
-    public TechBuilder getTechBuilder(TechBuilder builder) {
+    public TechBuilder getTechBuilder() {
         return TechBuilder.Builder()
                 .setRestriction(ARestrictionType.RECIPE)
                 .addStage("empty_tech");

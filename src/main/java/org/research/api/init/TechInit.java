@@ -15,6 +15,7 @@ import org.research.Research;
 import org.research.api.tech.AbstractTech;
 import org.research.api.tech.EmptyTech;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 @Mod.EventBusSubscriber(modid = Research.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
@@ -52,6 +53,19 @@ public class TechInit {
         return TECHS.register(id, () -> tech);
     }
 
+    public static List<AbstractTech> getAllTech(){
+        return TechInit.REGISTRY.get()
+                .getValues()
+                .stream()
+                .toList();
+    }
+    public static AbstractTech getTech(ResourceLocation id){
+        var tech = REGISTRY.get().getValue(id);
+        if (tech == null) {
+            return EMPTY;
+        }
+        return tech;
+    }
 
     public static RegistryObject<AbstractTech> FIRST_TECH = registerTech(EMPTY);
 
