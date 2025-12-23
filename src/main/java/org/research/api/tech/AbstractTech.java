@@ -48,10 +48,14 @@ public abstract class AbstractTech {
         return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace(), "textures/gui/tech_icons/" + getId() + ".png");
     }
 
+    public final ResourceLocation getARestrictionTypeResource(){
+        return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace(),"textures/gui/restriction/" + getTechBuilder().restriction + ".png");
+    }
 
     public abstract TechBuilder getTechBuilder();
 
     public abstract void eventHandle(Event event);
+
 
 
 }

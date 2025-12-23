@@ -26,7 +26,8 @@ public class PlayerTechTreeData extends GraphAdjList<TechInstance> implements IT
 
 
     /**
-     * 将注册项初始化为图表
+     * 将注册项初始化为图表，
+     * 每次启动的时候都要重新初始化，不需要持久化存储
      */
     public void init() {
         List<TechInstance> techs = initInstance(player);
@@ -55,7 +56,6 @@ public class PlayerTechTreeData extends GraphAdjList<TechInstance> implements IT
                 }
             }
         }
-
     }
 
     @Override
@@ -94,6 +94,16 @@ public class PlayerTechTreeData extends GraphAdjList<TechInstance> implements IT
             newCurrent.setTechState(TechState.AVAILABLE);
         }
     }
+
+    @Override
+    public void complete(ResourceLocation techId) {
+        if (techMap.containsKey(techId)) {
+            techMap.get(techId).setTechState(TechState.COMPLETED);
+        }
+
+    }
+
+
 
 
 }

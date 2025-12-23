@@ -1,6 +1,7 @@
 package org.research.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -11,10 +12,12 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import org.research.api.util.Texture;
 
 import javax.annotation.Nullable;
-
+@OnlyIn(value = Dist.CLIENT)
 public class ResearchScreen extends Screen {
 
     private ResourceLocation texture;
@@ -26,6 +29,17 @@ public class ResearchScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+
+
+    }
+
+    private void initWight(){
+        addRenderableWidget();
     }
 
     @Override
