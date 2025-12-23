@@ -10,28 +10,37 @@ import java.util.List;
 public class TechInstance {
 
     private AbstractTech tech;
-    private TechState state;
+    private int stateValue;          //TechStage enum
     private ServerPlayer serverPlayer;
+
     public TechInstance(AbstractTech tech, ServerPlayer serverPlayer) {
         this.tech = tech;
-        this.state = TechState.LOCKED;
+        this.stateValue = TechState.LOCKED.getValue();
         this.serverPlayer = serverPlayer;
     }
 
     public void setTechState(TechState state) {
 
-        ChangeTechStageEvent event = new ChangeTechStageEvent(this.state,state,this, serverPlayer);
+        ChangeTechStageEvent event = new ChangeTechStageEvent(getState(),state,this, serverPlayer);
         if (this.serverPlayer == null || !MinecraftForge.EVENT_BUS.post(event)) {
-            this.state = event.getNewState();
+            this.stateValue = event.getNewState().getValue();
         }
         if (this.serverPlayer != null ){
-            this.state = event.getNewState();
+            this.stateValue = event.getNewState().getValue();
         }
 
     }
 
     public TechState getState() {
-        return state;
+        return getState(stateValue);
+    }
+    public TechState getState(int stateValue) {
+        for (TechState type : TechState.values()) {
+            if (type.getValue() == stateValue) {
+                return type;
+            }
+        }
+        return TechState.LOCKED;
     }
 
     public AbstractTech getTech() {
@@ -46,9 +55,12 @@ public class TechInstance {
         return tech.getTechBuilder().parent;
     }
 
-    public List<ResourceLocation> getChildren() {
-        return tech.getTechBuilder().child;
+    public ResourceLocation getIdentifier() {
+        return tech.getIdentifier();
     }
+//    public List<ResourceLocation> getChildren() {
+//        return tech.getTechBuilder().child;
+//    }
 
 
 

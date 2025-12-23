@@ -1,8 +1,10 @@
 package org.research.api.tech.graphTree;
 
 import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
 
-public class GraphAdjList<E> implements IGraph<E> {
+public abstract class GraphAdjList<E> implements IGraph<E> {
     // 邻接表中表对应的链表的顶点
     private static class ENode {
         int adjvex; // 邻接顶点序号
@@ -25,11 +27,29 @@ public class GraphAdjList<E> implements IGraph<E> {
     private int numOfVexs;          // 顶点的实际数量
     private int maxNumOfVexs;       // 顶点的最大数量
     private boolean[] visited;      // 判断顶点是否被访问过
-
+    protected E current;            // 当前节点
 
     public GraphAdjList(int maxNumOfVexs) {
         this.maxNumOfVexs = maxNumOfVexs;
         vexs = (VNode<E>[]) Array.newInstance(VNode.class, maxNumOfVexs);
+    }
+
+
+
+
+    // 获取当前节点
+    protected abstract E getFirstTech();
+
+    // 设置当前节点
+    public void setCurrent(E node) {
+        this.current = node;
+    }
+
+    public E getCurrent() {
+        if (current == null) {
+            current = getFirstTech();
+        }
+        return current;
     }
 
     // 得到顶点的数目
@@ -106,56 +126,57 @@ public class GraphAdjList<E> implements IGraph<E> {
         return vexs[v].data;
     }
 
-    // 插入边
+    @Override
+    public boolean insertEdge(int v1, int v2) {
+        return insertEdge(v1,v2,1);
+    }
+
+    // 插入有向边（从v1到v2）
     public boolean insertEdge(int v1, int v2, int weight) {
         if (v1 < 0 || v2 < 0 || v1 >= numOfVexs || v2 >= numOfVexs)
             throw new ArrayIndexOutOfBoundsException();
         ENode vex1 = new ENode(v2, weight);
 
-        // 索引为index1的顶点没有邻接顶点
+        // 索引为v1的顶点没有邻接顶点
         if (vexs[v1].firstadj == null) {
             vexs[v1].firstadj = vex1;
         }
-        // 索引为index1的顶点有邻接顶点
+        // 索引为v1的顶点有邻接顶点
         else {
             vex1.nextadj = vexs[v1].firstadj;
             vexs[v1].firstadj = vex1;
         }
-        ENode vex2 = new ENode(v1, weight);
-        // 索引为index2的顶点没有邻接顶点
-        if (vexs[v2].firstadj == null) {
-            vexs[v2].firstadj = vex2;
-        }
-        // 索引为index1的顶点有邻接顶点
-        else {
-            vex2.nextadj = vexs[v2].firstadj;
-            vexs[v2].firstadj = vex2;
-        }
         return true;
     }
+    
+    public boolean insertEdge(E v1, E v2) {
+        if (v1 == null || v2 == null) {
+            return false;
+        } else {
+            return insertEdge(indexOfVex(v1),indexOfVex(v2),1);
+        }
+    }
 
-    // 删除边
+    // 删除有向边（从v1到v2）
     public boolean deleteEdge(int v1, int v2) {
         if (v1 < 0 || v2 < 0 || v1 >= numOfVexs || v2 >= numOfVexs)
             throw new ArrayIndexOutOfBoundsException();
-        // 删除索引为index1的顶点与索引为index2的顶点之间的边
+        // 删除从v1到v2的边
         ENode current = vexs[v1].firstadj;
         ENode previous = null;
         while (current != null && current.adjvex != v2) {
             previous = current;
             current = current.nextadj;
         }
-        if (current != null)
-            previous.nextadj = current.nextadj;
-        // 删除索引为index2的顶点与索引为index1的顶点之间的边
-        current = vexs[v2].firstadj;
-        while (current != null && current.adjvex != v1) {
-            previous = current;
-            current = current.nextadj;
+        if (current != null) {
+            if (previous == null) {
+                vexs[v1].firstadj = current.nextadj;
+            } else {
+                previous.nextadj = current.nextadj;
+            }
+            return true;
         }
-        if (current != null)
-            previous.nextadj = current.nextadj;
-        return true;
+        return false;
     }
 
     // 得到边
@@ -172,19 +193,63 @@ public class GraphAdjList<E> implements IGraph<E> {
         return 0;
     }
 
-//    // 深度优先搜索遍历
-//    public String depthFirstSearch(int v) {
-//
-//    }
-//
-//    // 广度优先搜索遍历
-//    public String breadFirstSearch(int v) {
-//
-//    }
-//
-//    // 实现Dijkstra算法
-//    public int[] dijkstra(int v) {
-//
-//    }
-}
+    // 获取节点的所有后继节点（有向图中从当前节点出发能到达的节点）
+    public List<Integer> getSuccessors(int v) {
+        if (v < 0 || v >= numOfVexs)
+            throw new ArrayIndexOutOfBoundsException();
+        List<Integer> successors = new ArrayList<>();
+        ENode current = vexs[v].firstadj;
+        while (current != null) {
+            successors.add(current.adjvex);
+            current = current.nextadj;
+        }
+        return successors;
+    }
 
+    // 获取节点的所有前驱节点（有向图中能到达当前节点的节点）
+    public List<Integer> getPredecessors(int v) {
+        if (v < 0 || v >= numOfVexs)
+            throw new ArrayIndexOutOfBoundsException();
+        List<Integer> predecessors = new ArrayList<>();
+        for (int i = 0; i < numOfVexs; i++) {
+            if (i == v) continue;
+            ENode current = vexs[i].firstadj;
+            while (current != null) {
+                if (current.adjvex == v) {
+                    predecessors.add(i);
+                    break;
+                }
+                current = current.nextadj;
+            }
+        }
+        return predecessors;
+    }
+
+    // 前进到下一个节点（模板方法）
+    public void nextNode() {
+        if (current == null) {
+            return;
+        }
+        
+        // 获取当前节点的索引
+        int currentIndex = indexOfVex(current);
+        if (currentIndex == -1) {
+            return;
+        }
+        
+        // 获取当前节点的所有后继节点
+        List<Integer> successors = getSuccessors(currentIndex);
+        
+        // 如果有后继节点，将第一个后继节点设置为当前节点
+        if (!successors.isEmpty()) {
+            int nextIndex = successors.get(0);
+            E nextNode = valueOfVex(nextIndex);
+            if (nextNode != null) {
+                current = nextNode;
+            }
+        } else {
+            // 如果没有后继节点，将current设为null表示到达终点
+            current = null;
+        }
+    }
+}

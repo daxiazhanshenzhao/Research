@@ -20,6 +20,8 @@ public class TechBuilder {
 
     public @Nullable AStage stage;
     public List<ResourceLocation> parent = new ArrayList<>();
+
+    @Deprecated
     public List<ResourceLocation> child = new ArrayList<>();
 
 
@@ -44,9 +46,9 @@ public class TechBuilder {
         return this;
     }
 
-    public void addChild(ResourceLocation child) {
-        this.child.add(child);
-    }
+//    public void addChild(ResourceLocation child) {
+//        this.child.add(child);
+//    }
 
     public void addParent(ResourceLocation parent) {
         this.parent.add(parent);
