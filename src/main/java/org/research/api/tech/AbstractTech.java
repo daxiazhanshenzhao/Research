@@ -17,6 +17,7 @@ public abstract class AbstractTech {
     private @Nullable ResourceLocation identifier;
 
     //config
+
 //    private @Nullable AStage stage;
 //    private @Nullable ARestrictionType restriction;
 //
@@ -52,10 +53,23 @@ public abstract class AbstractTech {
         return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace(),"textures/gui/restriction/" + getTechBuilder().restriction + ".png");
     }
 
+    public ARestrictionType getARestrictionType(){
+        return getTechBuilder().restriction;
+    }
+
     public abstract TechBuilder getTechBuilder();
 
+    /**
+     * 解锁调用
+     * @param event
+     */
     public abstract void eventHandle(Event event);
 
+
+    /**
+     * 在初始化时锁定
+     */
+    public abstract void restriction();
 
 
 }

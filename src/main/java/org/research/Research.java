@@ -32,6 +32,7 @@ public class Research {
         TechInit.register(modEventBus);
 
         modEventBus.addListener(this::setupClient);
+        
     }
     private void setupClient(FMLClientSetupEvent evt) {
         evt.enqueueWork(() -> {

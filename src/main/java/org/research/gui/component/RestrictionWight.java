@@ -17,6 +17,7 @@ public class RestrictionWight extends AbstractWidget {
 
     @Override
     protected void renderWidget(GuiGraphics guiGraphics, int i, int i1, float v) {
+        renderBg(guiGraphics);
 
     }
 

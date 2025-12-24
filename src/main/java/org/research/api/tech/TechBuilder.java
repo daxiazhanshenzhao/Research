@@ -18,7 +18,7 @@ public class TechBuilder {
 
     public @Nullable ARestrictionType restriction;
 
-    public @Nullable AStage stage;
+    public @Nullable int stage = -1;
     public List<ResourceLocation> parent = new ArrayList<>();
 
     @Deprecated
@@ -35,8 +35,8 @@ public class TechBuilder {
 //        return this;
 //    }
 
-    public TechBuilder addStage(String stage) {
-        this.stage = new AStage(stage);
+    public TechBuilder addStage(int stage) {
+        this.stage = stage;
         return this;
     }
 
@@ -62,6 +62,6 @@ public class TechBuilder {
     }
 
     private boolean validate(){
-        return stage != null && restriction != null;
+        return stage != -1 && restriction != null;
     }
 }

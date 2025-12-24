@@ -1,29 +1,20 @@
 package org.research.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.multiplayer.ClientAdvancements;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.research.api.util.Texture;
+import org.research.player.inventory.ResearchContainer;
 
-import javax.annotation.Nullable;
 @OnlyIn(value = Dist.CLIENT)
-public class ResearchScreen extends Screen {
+public class ResearchScreen extends ResearchContainerScreen<ResearchContainer> {
 
     private ResourceLocation texture;
 
-    public ResearchScreen() {
-        super(Component.empty());
+    public ResearchScreen(ResearchContainer container) {
+        super(container);
+
     }
 
     @Override

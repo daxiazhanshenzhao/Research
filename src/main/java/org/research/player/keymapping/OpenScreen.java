@@ -26,6 +26,7 @@ public class OpenScreen extends KeyMapping {
     public Screen getScreen() {
         return screen;
     }
+    
 
     @SubscribeEvent
     public static void click(TickEvent.ClientTickEvent event) {

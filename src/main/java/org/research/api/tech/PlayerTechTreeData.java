@@ -22,6 +22,8 @@ public class PlayerTechTreeData extends GraphAdjList<TechInstance> implements IT
         this.player = player;
         current = getCurrent();
         init();
+
+
     }
 
 
