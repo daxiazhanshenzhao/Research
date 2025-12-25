@@ -12,7 +12,7 @@ public class ScreenProvider {
 
 
     public static Screen getResearchScreen() {
-        return new ResearchScreen(new ResearchContainer());
+        return new ResearchScreen();
     }
 
     public static void openResearchScreen() {

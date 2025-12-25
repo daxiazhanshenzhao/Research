@@ -1,11 +1,8 @@
 package org.research.api.init;
 
 
-import dev.architectury.event.events.common.TickEvent;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.common.capabilities.CapabilityToken;
@@ -32,13 +29,16 @@ public class CapInit {
             event.addCapability(
                     Research.asResource("tech_tree"),
                     new TechTreeDataProvider(player));
+        }else {
+            
         }
+
     }
 
-    public static final Capability<ITechTreeCapability> BODY_DATA;
+    public static final Capability<ITechTreeCapability> ResearchData;
 
 
     static {
-        BODY_DATA = CapabilityManager.get(new CapabilityToken<>() {});
+        ResearchData = CapabilityManager.get(new CapabilityToken<>() {});
     }
 }

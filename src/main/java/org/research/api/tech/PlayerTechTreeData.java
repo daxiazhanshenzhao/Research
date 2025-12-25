@@ -1,111 +1,234 @@
 package org.research.api.tech;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.common.util.LazyOptional;
+import org.joml.Vector2i;
+import org.research.Research;
 import org.research.api.init.TechInit;
 import org.research.api.tech.capability.ITechTreeCapability;
 import org.research.api.tech.graphTree.GraphAdjList;
+import org.research.api.tech.graphTree.Vec2i;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class PlayerTechTreeData extends GraphAdjList<TechInstance> implements ITechTreeCapability {
+import static org.apache.logging.log4j.core.async.ThreadNameCachingStrategy.CACHED;
+import static org.research.api.tech.capability.TechTreeDataProvider.*;
+
+//只在服务端控制
+public class PlayerTechTreeData implements ITechTreeCapability {
 
     private ServerPlayer player;
-    private Map<ResourceLocation, TechInstance> techMap;
-    private TechInstance currentTech;   //只是玩家鼠标选取的tech
+
+    /**
+     * only server
+     */
+    private Map<ResourceLocation,TechInstance> techMap = new HashMap<>();
+    /**
+     * client or server
+     */
+    private Map<ResourceLocation,TechInstance> cacheds = new HashMap<>();
+    private Map<ResourceLocation,Vec2i> vecMap = new HashMap<>();
 
     public PlayerTechTreeData(ServerPlayer player) {
-        super(TechInit.getAllTech().size());
+//        super(TechInit.getAllTech().size());
         this.player = player;
-        current = getCurrent();
-        init();
+//        current = getCurrent();
+        initTechSlot();
+
+    }
+
+    public PlayerTechTreeData(Map<ResourceLocation,TechInstance> techMap,Map<ResourceLocation,Vec2i> vecMap) {
+        this(null);
+        this.techMap = techMap;
+        this.vecMap = vecMap;
 
 
     }
 
 
+
+//    /**
+//     * 将注册项初始化为图表，
+//     * 每次启动的时候都要重新初始化，不需要持久化存储
+//     */
+//    public void init() {
+//        // 先插入顶点
+//        for (TechInstance tech : techMap.values()) {
+//            insertVex(tech);
+//        }
+//
+//        // 再插入边
+//        for (TechInstance tech : techMap.values()) {
+//            List<ResourceLocation> parents = tech.getParents();
+//            if (parents != null && !parents.isEmpty()) {
+//                for (ResourceLocation parentId : parents) {
+//                    TechInstance parentTech = techMap.get(parentId);
+//                    if (parentTech != null) {
+//                        // 插入从父节点到当前节点的边
+//                        insertEdge(parentTech, tech);
+//                    }
+//                }
+//            }
+//        }
+//    }
+
+    @Override
+    public TechInstance getFirstTech() {
+        TechInstance techinstance = new TechInstance(TechInit.FIRST_TECH.get(),player);
+        techinstance.setTechState(TechState.COMPLETED);
+        return techinstance;
+    }
+
+
+
     /**
-     * 将注册项初始化为图表，
-     * 每次启动的时候都要重新初始化，不需要持久化存储
+     * 重写nextNode方法，添加状态管理
      */
-    public void init() {
-        List<TechInstance> techs = initInstance(player);
-        
-        // 创建ResourceLocation到TechInstance的映射，便于快速查找
-        techMap = new HashMap<>();
-        for (TechInstance tech : techs) {
-            techMap.put(tech.getIdentifier(), tech);
+
+    @Override
+    public void initTechSlot() {
+        addTech(TechInit.FIRST_TECH.get(),100,100);
+
+    }
+
+    @Override
+    public void addTech(AbstractTech tech, int x, int y) {
+        var techInstance = new TechInstance(tech,player);
+        var vec2i = new Vec2i(x,y);
+
+        techMap.put(tech.getIdentifier(),techInstance);
+        vecMap.put(tech.getIdentifier(),vec2i);
+    }
+
+
+
+
+    @Override
+    public void removeTech(AbstractTech tech) {
+        techMap.remove(tech.getIdentifier());
+    }
+
+    @Override
+    public void changeTech(AbstractTech tech, TechState state) {
+        var instance = techMap.getOrDefault(tech.getIdentifier(), null);
+        if (instance != null) {
+            instance.setTechState(state);
         }
-        
-        // 先插入顶点
-        for (TechInstance tech : techs) {
-            insertVex(tech);
+    }
+
+    //TODO : 等AI额度恢复了来写最复杂的逻辑
+    @Override
+    public void tryNext(AbstractTech tech) {
+        var instance = techMap.getOrDefault(tech.getIdentifier(),null);
+        if (instance != null) {
+
+
+
         }
-        
-        // 再插入边
-        for (TechInstance tech : techs) {
-            List<ResourceLocation> parents = tech.getParents();
-            if (parents != null && !parents.isEmpty()) {
-                for (ResourceLocation parentId : parents) {
-                    TechInstance parentTech = techMap.get(parentId);
-                    if (parentTech != null) {
-                        // 插入从父节点到当前节点的边
-                        insertEdge(parentTech, tech);
+    }
+
+    @Override
+    public void tick(ServerPlayer player, int tickCount) {
+        autoSync();
+    }
+
+
+
+
+
+
+    /**
+     * 比较差异来快速同步
+     * 1.比较AbstractTech
+     * 2.比较
+     */
+    private void autoSync(){
+        //将tech同步到缓存
+        for (TechInstance tech : techMap.values()) {
+            var id = tech.getIdentifier();
+
+            //如果使用了add方法
+            if (!cacheds.containsKey(id)) {
+
+                cacheds.put(id, tech);
+                syncToClient();
+            }
+
+            //如果改变了其他的
+            if (cacheds.containsKey(id)) {
+                var cached = cacheds.get(id);
+                int result = tech.compareTo(cached);
+                if (result != 0){
+
+                    cacheds.put(id, tech);
+                    syncToClient();
+                }
+
+
+            }
+        }
+
+        //如果使用了move方法
+        if (cacheds.size() != techMap.size()) {
+            //将缓存多余部分移除
+            for (var cached : cacheds.keySet()) {
+                for (var tech : techMap.keySet()) {
+                    if (!cached.equals(tech)){
+
+                        this.cacheds.remove(cached);
+                        syncToClient();
                     }
                 }
             }
         }
     }
-
     @Override
-    protected TechInstance getFirstTech() {
-        return new TechInstance(TechInit.FIRST_TECH.get(),player);
+    public void syncToClient() {
+
     }
 
-    private List<TechInstance> initInstance(ServerPlayer player) {
-        List<TechInstance> techs = new ArrayList<>();
-        for (AbstractTech tech : TechInit.getAllTech()) {
-            TechInstance instance = new TechInstance(tech, player);
-            techs.add(instance);
-        }
-        return techs;
-    }
 
-    /**
-     * 重写nextNode方法，添加状态管理
-     */
+    public static final Codec<PlayerTechTreeData> CODEC = RecordCodecBuilder.create(instance ->
+        instance.group(
+                Codec.unboundedMap(ResourceLocation.CODEC, TechInstance.CODEC).fieldOf(CACHEDs).forGetter(PlayerTechTreeData::getCacheds),
+                Codec.unboundedMap(ResourceLocation.CODEC, Vec2i.CODEC).fieldOf(VEC).forGetter(PlayerTechTreeData::getVecMap)
+        ).apply(instance,PlayerTechTreeData::new));
+
     @Override
-    public void nextNode() {
-        TechInstance current = getCurrent();
-        if (current == null) {
-            return;
-        }
-        
-        // 将当前节点标记为完成
-        current.setTechState(TechState.COMPLETED);
-        
-        // 调用父类的nextNode方法移动到下一个节点
-        super.nextNode();
-        
-        // 获取新的当前节点并设置为可用状态
-        TechInstance newCurrent = getCurrent();
-        if (newCurrent != null) {
-            newCurrent.setTechState(TechState.AVAILABLE);
-        }
+    public Map<ResourceLocation, TechInstance> getCacheds() {
+        return cacheds;
     }
 
     @Override
-    public void complete(ResourceLocation techId) {
-        if (techMap.containsKey(techId)) {
-            techMap.get(techId).setTechState(TechState.COMPLETED);
-        }
+    public Map<ResourceLocation, Vec2i> getVecMap() {
+        return vecMap;
+    }
 
+    //将数据解析为nbt
+    @Override
+    public CompoundTag serializeNBT() {
+        CompoundTag tag = new CompoundTag();
+            var dataResult = PlayerTechTreeData.CODEC.encodeStart(NbtOps.INSTANCE, this);
+            dataResult.result().ifPresent(nbt->tag.put(TREE_DATA, nbt));
+        return tag;
     }
 
 
-
-
+    //将nbt解析回数据
+    @Override
+    public void deserializeNBT(CompoundTag compoundTag) {
+        Tag dataResult = compoundTag.get(TREE_DATA);
+        var a = PlayerTechTreeData.CODEC.parse(NbtOps.INSTANCE,dataResult);
+        a.result().ifPresent(playerTechTreeData ->{
+                    this.cacheds = playerTechTreeData.getCacheds();
+                    this.vecMap = playerTechTreeData.getVecMap();
+                }
+        );
+    }
 }

@@ -1,27 +1,49 @@
 package org.research.api.tech;
 
 import com.alessandro.astages.util.ARestrictionType;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.common.MinecraftForge;
+import org.research.Research;
 import org.research.api.event.custom.ChangeTechStageEvent;
+import org.research.api.init.TechInit;
 
 import java.util.List;
 import java.util.Objects;
 
-public class TechInstance{
+import static org.research.api.tech.capability.TechTreeDataProvider.ID;
+
+public class TechInstance implements Comparable<TechInstance> {
+
+    public static final String ID = "tech_id";
+    public static final String STATE = "tech_state";
+    public static final String FOCUS = "tech_focus";
 
     private AbstractTech tech;
-    private int stateValue;          //TechStage enum
+
     private ServerPlayer serverPlayer;
 
-    private boolean active; //用于container，false就默认不会显示和参与初始化
-    private boolean focused;
+
+    /**
+     * 查看玩家的点击状态。
+     */
+    private boolean focused = false;
+    private int stateValue = 0;          //TechStage enum
+
 
     public TechInstance(AbstractTech tech, ServerPlayer serverPlayer) {
         this.tech = tech;
         this.stateValue = TechState.LOCKED.getValue();
         this.serverPlayer = serverPlayer;
+    }
+
+    public TechInstance(ResourceLocation resourceLocation, Integer stageValue, Boolean focused) {
+        this.tech = TechInit.getTech(resourceLocation);
+        this.stateValue = stageValue;
+        this.serverPlayer = null;
+        this.focused = focused;
     }
 
     public void setTechState(TechState state) {
@@ -46,6 +68,10 @@ public class TechInstance{
             }
         }
         return TechState.LOCKED;
+    }
+
+    public void setFocused(boolean focused) {
+        this.focused = focused;
     }
 
     public AbstractTech getTech() {
@@ -76,22 +102,63 @@ public class TechInstance{
     public int hashCode() {
         return Objects.hashCode(tech);
     }
+    @Override
+    public int compareTo(TechInstance other) {
+        if (this == other) return 0;
+        if (other == null) return 1;
+        
+        // 比较 tech 字段
+        if (this.tech != other.tech) {
+            if (this.tech == null) return -1;
+            if (other.tech == null) return 1;
+
+            ResourceLocation id1 = this.tech.getIdentifier();
+            ResourceLocation id2 = other.tech.getIdentifier();
+            if (id1 != id2) {
+                if (id1 == null) return -1;
+                if (id2 == null) return 1;
+                int techCompare = id1.compareTo(id2);
+                if (techCompare != 0) return techCompare;
+            }
+        }
+        
+        // 比较 serverPlayer 字段
+        if (this.serverPlayer != other.serverPlayer) {
+            if (this.serverPlayer == null) return -1;
+            if (other.serverPlayer == null) return 1;
+            int playerCompare = this.serverPlayer.getUUID().compareTo(other.serverPlayer.getUUID());
+            if (playerCompare != 0) return playerCompare;
+        }
+        
+        // 比较 stateValue 字段
+        int stateCompare = Integer.compare(this.stateValue, other.stateValue);
+        if (stateCompare != 0) return stateCompare;
+        
+        // 比较 focused 字段
+        return Boolean.compare(this.focused, other.focused);
+    }
 
     //    public List<ResourceLocation> getChildren() {
 //        return tech.getTechBuilder().child;
 //    }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public boolean isFocused() {
         return focused;
-    }
-
-    public void setFocused(boolean focused) {
-        this.focused = focused;
-    }
-
-    public boolean isActive() {
-        return active;
     }
 
     public int getStateValue() {
@@ -101,4 +168,13 @@ public class TechInstance{
     public ARestrictionType getARestrictionType() {
         return tech.getTechBuilder().restriction;
     }
+
+    public static final Codec<TechInstance> CODEC = RecordCodecBuilder.create(instance ->
+        instance.group(
+            ResourceLocation.CODEC.fieldOf(ID).forGetter(TechInstance::getIdentifier),
+            Codec.INT.fieldOf(STATE).forGetter(TechInstance::getStateValue),
+                Codec.BOOL.fieldOf(FOCUS).forGetter(TechInstance::isFocused)
+        ).apply(instance,TechInstance::new));
+
+
 }

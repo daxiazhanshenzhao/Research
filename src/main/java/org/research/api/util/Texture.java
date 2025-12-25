@@ -8,10 +8,10 @@ public class Texture {
 
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Research.MODID, "textures/gui/research.png");
 
-    private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(Research.MODID, "textures/gui/background.png");
+    private static final ResourceLocation BACKGROUND = Research.asResource( "textures/gui/background.png");
 
 
-    public static final BlitContext background = new BlitContext(0,0,256,256);
+    public static final BlitContext background = new BlitContext(BACKGROUND,0,0,256,256);
 
 
 

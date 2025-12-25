@@ -3,12 +3,13 @@ package org.research.api.event.custom;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.Cancelable;
 import net.minecraftforge.eventbus.api.Event;
 import org.research.api.tech.TechInstance;
 import org.research.api.tech.TechState;
 
 
-
+@Cancelable
 public class ChangeTechStageEvent extends PlayerEvent {
 
     public ChangeTechStageEvent(TechState oldState, TechState newState, TechInstance techInstance, ServerPlayer player) {
