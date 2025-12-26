@@ -11,6 +11,8 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.research.api.init.TechInit;
 import org.slf4j.Logger;
 
+import java.util.Locale;
+
 
 @Mod(Research.MODID)
 public class Research {
@@ -25,9 +27,7 @@ public class Research {
      * @return
      */
     public static ResourceLocation asResource(String path){
-
-
-        return ResourceLocation.fromNamespaceAndPath(MODID,path);
+        return ResourceLocation.fromNamespaceAndPath(MODID,path.toLowerCase());
     }
 
     public Research(){

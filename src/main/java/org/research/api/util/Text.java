@@ -25,6 +25,10 @@ public class Text {
                     techTree.addTech(TechInit.IRON_TECH.get(),50,10);
                 }
 
+                if (item.equals(Items.GOLD_INGOT)) {
+                    techTree.removeTech(TechInit.IRON_TECH.get());
+                }
+
             });
 
         }

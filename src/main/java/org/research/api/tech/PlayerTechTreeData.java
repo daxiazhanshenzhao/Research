@@ -107,6 +107,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
     @Override
     public PlayerTechTreeData addTech(AbstractTech tech, int x, int y) {
+        if (techMap.containsKey(tech.getIdentifier())) return this;
+
         var techInstance = new TechInstance(tech,player);
         var vec2i = new Vec2i(x,y);
 
@@ -121,7 +123,12 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
     @Override
     public PlayerTechTreeData removeTech(AbstractTech tech) {
-        techMap.remove(tech.getIdentifier());
+        if (techMap.containsKey(tech.getIdentifier())) {
+            techMap.remove(tech.getIdentifier());
+            vecMap.remove(tech.getIdentifier());
+        }
+
+
         return this;
     }
 
@@ -234,41 +241,47 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
      * 2.比较
      */
     private void autoSync(){
+        boolean needsSync = false;
+        
         //将tech同步到缓存
         for (TechInstance tech : techMap.values()) {
             var id = tech.getIdentifier();
 
             //如果使用了add方法
             if (!cacheds.containsKey(id)) {
-
                 cacheds.put(id, tech);
-                syncToClient();
+                needsSync = true;
             }
-
             //如果改变了其他的
-            if (cacheds.containsKey(id)) {
+            else if (cacheds.containsKey(id)) {
                 var cached = cacheds.get(id);
                 int result = tech.compareTo(cached);
                 if (result != 0){
-
                     cacheds.put(id, tech);
-                    syncToClient();
+                    needsSync = true;
                 }
             }
         }
 
-        //如果使用了move方法
-        if (cacheds.size() != techMap.size()) {
-            //将缓存多余部分移除
-            for (var cached : cacheds.keySet()) {
-                for (var tech : techMap.keySet()) {
-                    if (!cached.equals(tech)){
-
-                        this.cacheds.remove(cached);
-                        syncToClient();
-                    }
-                }
+        // 找出需要从缓存中移除的key（在cacheds中存在但在techMap中不存在）
+        List<ResourceLocation> keysToRemove = new ArrayList<>();
+        for (ResourceLocation cachedKey : cacheds.keySet()) {
+            if (!techMap.containsKey(cachedKey)) {
+                keysToRemove.add(cachedKey);
             }
+        }
+        
+        // 批量移除
+        if (!keysToRemove.isEmpty()) {
+            for (ResourceLocation key : keysToRemove) {
+                cacheds.remove(key);
+            }
+            needsSync = true;
+        }
+        
+        // 如果需要同步，则同步到客户端
+        if (needsSync) {
+            syncToClient();
         }
     }
     @Override
@@ -318,5 +331,9 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
     public int getStage() {
         return stage;
+    }
+
+    public void setPlayer(ServerPlayer player) {
+        this.player = player;
     }
 }

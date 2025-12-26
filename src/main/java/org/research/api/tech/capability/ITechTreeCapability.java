@@ -76,4 +76,7 @@ public interface ITechTreeCapability<T> {
     void focus(AbstractTech tech);
 
     ResourceLocation getFocus();
+
+    void setPlayer(ServerPlayer player);
+
 }

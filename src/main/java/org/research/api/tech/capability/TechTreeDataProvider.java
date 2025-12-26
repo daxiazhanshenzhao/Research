@@ -20,6 +20,7 @@ import org.research.Research;
 import org.research.api.init.CapInit;
 import org.research.api.tech.PlayerTechTreeData;
 import org.research.api.tech.TechInstance;
+import org.research.api.util.ResearchApi;
 
 import javax.annotation.Nullable;
 
@@ -85,6 +86,15 @@ public class TechTreeDataProvider implements ICapabilitySerializable<CompoundTag
         }
     }
 
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            ResearchApi.getTechTreeData(serverPlayer).ifPresent(data -> {
+                data.setPlayer(serverPlayer);
+            });
+        }
+
+    }
 
 
 }
