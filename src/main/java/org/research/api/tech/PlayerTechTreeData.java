@@ -38,6 +38,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
      */
     private Map<ResourceLocation,TechInstance> cacheds = new HashMap<>();
     private Map<ResourceLocation,Vec2i> vecMap = new HashMap<>();
+
     private int stage = 0;
 
     public PlayerTechTreeData(ServerPlayer player) {
@@ -137,19 +138,12 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
             if (tech.getTech() instanceof IRecipe recipeWrapper){
                 var recipeWrapperData = recipeWrapper.getRecipe();
                 var registryAccess = player.server.registryAccess();
-
                 var recipe = IRecipe.getRecipeFromWrapper(recipeWrapperData, player.server);
-                
                 if (recipe != null) {
-                    // 获取配方输出
                     ItemStack recipeOutput = recipe.getResultItem(registryAccess);
-                    
-
                     if (ItemStack.isSameItemSameTags(recipeOutput, itemStack)) {
-
                         tech.setTechState(TechState.COMPLETED);
                         tryNext(tech.getTech());
-
                     }
                 }
             }
@@ -157,12 +151,41 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     }
 
     //TODO : 等AI额度恢复了来写最复杂的逻辑
+    //TOD0 : 没想好怎么写关注切换的问题
     @Override
     public void tryNext(AbstractTech tech) {
         var instance = techMap.getOrDefault(tech.getIdentifier(),null);
         if (instance != null) {
-            
 
+
+
+            //遍历科技树的所有的父节点
+            List<ResourceLocation> techChildList = new ArrayList<>();
+            for (TechInstance techInstance : techMap.values()){
+                List<ResourceLocation> parents = techInstance.getParents();
+                if (parents != null
+                        && !parents.isEmpty()
+                        && parents.equals(tech.getIdentifier())){
+
+                    techChildList.add(techInstance.getIdentifier());
+                }
+            };
+
+            //1.没有任意parens节点
+            if (techChildList.isEmpty()) return;
+            //2.有一个
+            if (techChildList.size() == 1) {
+                instance.setTechState(TechState.COMPLETED);
+                techMap.get(techChildList.get(0)).setTechState(TechState.AVAILABLE);
+
+            }
+            //3.多个节点
+            if (techChildList.size()>1){
+                instance.setTechState(TechState.WAITING);
+                for (ResourceLocation techChild : techChildList) {
+                    techMap.get(techChild).setTechState(TechState.AVAILABLE);
+                }
+            }
 
         }
     }
