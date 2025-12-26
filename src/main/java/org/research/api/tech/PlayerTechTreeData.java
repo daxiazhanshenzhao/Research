@@ -2,15 +2,19 @@ package org.research.api.tech;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraftforge.common.util.LazyOptional;
 import org.joml.Vector2i;
 import org.research.Research;
 import org.research.api.init.TechInit;
+import org.research.api.recipe.IRecipe;
 import org.research.api.tech.capability.ITechTreeCapability;
 import org.research.api.tech.graphTree.GraphAdjList;
 import org.research.api.tech.graphTree.Vec2i;
@@ -21,7 +25,7 @@ import static org.apache.logging.log4j.core.async.ThreadNameCachingStrategy.CACH
 import static org.research.api.tech.capability.TechTreeDataProvider.*;
 
 //只在服务端控制
-public class PlayerTechTreeData implements ITechTreeCapability {
+public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeData> {
 
     private ServerPlayer player;
 
@@ -34,6 +38,7 @@ public class PlayerTechTreeData implements ITechTreeCapability {
      */
     private Map<ResourceLocation,TechInstance> cacheds = new HashMap<>();
     private Map<ResourceLocation,Vec2i> vecMap = new HashMap<>();
+    private int stage = 0;
 
     public PlayerTechTreeData(ServerPlayer player) {
 //        super(TechInit.getAllTech().size());
@@ -43,10 +48,11 @@ public class PlayerTechTreeData implements ITechTreeCapability {
 
     }
 
-    public PlayerTechTreeData(Map<ResourceLocation,TechInstance> techMap,Map<ResourceLocation,Vec2i> vecMap) {
+    public PlayerTechTreeData(Map<ResourceLocation,TechInstance> techMap,Map<ResourceLocation,Vec2i> vecMap,int stage) {
         this(null);
         this.techMap = techMap;
         this.vecMap = vecMap;
+        this.stage = stage;
 
 
     }
@@ -98,27 +104,55 @@ public class PlayerTechTreeData implements ITechTreeCapability {
     }
 
     @Override
-    public void addTech(AbstractTech tech, int x, int y) {
+    public PlayerTechTreeData addTech(AbstractTech tech, int x, int y) {
         var techInstance = new TechInstance(tech,player);
         var vec2i = new Vec2i(x,y);
 
         techMap.put(tech.getIdentifier(),techInstance);
         vecMap.put(tech.getIdentifier(),vec2i);
+
+        return this;
     }
 
 
 
 
     @Override
-    public void removeTech(AbstractTech tech) {
+    public PlayerTechTreeData removeTech(AbstractTech tech) {
         techMap.remove(tech.getIdentifier());
+        return this;
     }
 
     @Override
-    public void changeTech(AbstractTech tech, TechState state) {
-        var instance = techMap.getOrDefault(tech.getIdentifier(), null);
+    public void changeTech(AbstractTech target, TechState state) {
+        var instance = techMap.getOrDefault(target.getIdentifier(), null);
         if (instance != null) {
             instance.setTechState(state);
+        }
+    }
+
+    @Override
+    public void tryComplete(ItemStack itemStack) {
+        for (TechInstance tech : techMap.values()) {
+            if (tech.getTech() instanceof IRecipe recipeWrapper){
+                var recipeWrapperData = recipeWrapper.getRecipe();
+                var registryAccess = player.server.registryAccess();
+
+                var recipe = IRecipe.getRecipeFromWrapper(recipeWrapperData, player.server);
+                
+                if (recipe != null) {
+                    // 获取配方输出
+                    ItemStack recipeOutput = recipe.getResultItem(registryAccess);
+                    
+
+                    if (ItemStack.isSameItemSameTags(recipeOutput, itemStack)) {
+
+                        tech.setTechState(TechState.COMPLETED);
+                        tryNext(tech.getTech());
+
+                    }
+                }
+            }
         }
     }
 
@@ -127,7 +161,7 @@ public class PlayerTechTreeData implements ITechTreeCapability {
     public void tryNext(AbstractTech tech) {
         var instance = techMap.getOrDefault(tech.getIdentifier(),null);
         if (instance != null) {
-
+            
 
 
         }
@@ -137,8 +171,6 @@ public class PlayerTechTreeData implements ITechTreeCapability {
     public void tick(ServerPlayer player, int tickCount) {
         autoSync();
     }
-
-
 
 
 
@@ -197,7 +229,8 @@ public class PlayerTechTreeData implements ITechTreeCapability {
     public static final Codec<PlayerTechTreeData> CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
                 Codec.unboundedMap(ResourceLocation.CODEC, TechInstance.CODEC).fieldOf(CACHEDs).forGetter(PlayerTechTreeData::getCacheds),
-                Codec.unboundedMap(ResourceLocation.CODEC, Vec2i.CODEC).fieldOf(VEC).forGetter(PlayerTechTreeData::getVecMap)
+                Codec.unboundedMap(ResourceLocation.CODEC, Vec2i.CODEC).fieldOf(VEC).forGetter(PlayerTechTreeData::getVecMap),
+                Codec.INT.fieldOf(STAGE).forGetter(PlayerTechTreeData::getStage)
         ).apply(instance,PlayerTechTreeData::new));
 
     @Override
@@ -230,5 +263,9 @@ public class PlayerTechTreeData implements ITechTreeCapability {
                     this.vecMap = playerTechTreeData.getVecMap();
                 }
         );
+    }
+
+    public int getStage() {
+        return stage;
     }
 }

@@ -1,9 +1,10 @@
 package org.research.api.recipe;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeType;
 
-public interface RecipeWrapper {
+public record RecipeWrapper(RecipeType<?> type, ResourceLocation recipe) {
 
-    void addRecipe(RecipeType<?> type, ResourceLocation recipe);
+
 }

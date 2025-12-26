@@ -4,6 +4,8 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
+//TODO :等我考完就来重构数据结构，现在哭了你了
+@Deprecated
 public abstract class GraphAdjList<E> implements IGraph<E> {
     // 邻接表中表对应的链表的顶点
     private static class ENode {

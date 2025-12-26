@@ -3,6 +3,7 @@ package org.research.api.tech.capability;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Vector2i;
 import org.research.api.tech.AbstractTech;
 import org.research.api.tech.TechInstance;
@@ -12,7 +13,7 @@ import org.research.api.tech.graphTree.Vec2i;
 import java.util.HashMap;
 import java.util.Map;
 
-public interface ITechTreeCapability {
+public interface ITechTreeCapability<T> {
 
 
     /**
@@ -26,13 +27,13 @@ public interface ITechTreeCapability {
      * @param x 相对于背景的x坐标
      * @param y 相对于背景的y坐标
      */
-    void addTech(AbstractTech tech, int x, int y);
+    T addTech(AbstractTech tech, int x, int y);
 
     /**
      * 动态移除科技
      * @param tech
      */
-    void removeTech(AbstractTech tech);
+    T removeTech(AbstractTech tech);
 
     /**
      * 转移科技状态专用方法
@@ -60,4 +61,10 @@ public interface ITechTreeCapability {
 
     CompoundTag serializeNBT();
     void deserializeNBT(CompoundTag compoundTag);
+
+    /**
+     * inventory发生变动时触发，尝试遍历所有的，只在服务端进入游戏过后触发
+     * @param itemStack 变动的物品
+     */
+    void tryComplete(ItemStack itemStack);
 }

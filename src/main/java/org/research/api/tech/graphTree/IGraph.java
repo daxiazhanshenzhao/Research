@@ -1,6 +1,6 @@
 package org.research.api.tech.graphTree;
 
-
+@Deprecated
 public interface IGraph<E> {
     public int getNumOfVertex();//获取顶点的个数
     boolean insertVex(E v);//插入顶点

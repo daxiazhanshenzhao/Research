@@ -38,8 +38,9 @@ public class TechTreeDataProvider implements ICapabilitySerializable<CompoundTag
     public static final String FOCUS = "tech_focus";
 
     //techTree
-    public static final String CACHEDs = "tech_cached_map_key";
+    public static final String CACHEDs = "tech_cached_map";
     public static final String VEC = "tech_vec_map";
+    public static final String STAGE = "tech_stage";
 
     public TechTreeDataProvider(ServerPlayer player) {
         this.lazyOptional = LazyOptional.of(() ->  new PlayerTechTreeData(player));
