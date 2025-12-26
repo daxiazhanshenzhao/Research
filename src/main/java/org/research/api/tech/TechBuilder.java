@@ -4,6 +4,7 @@ import com.alessandro.astages.core.stage.AStage;
 import com.alessandro.astages.core.stage.AStageManager;
 import com.alessandro.astages.util.ARestrictionType;
 import net.minecraft.resources.ResourceLocation;
+import org.research.api.recipe.RecipeWrapper;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -16,13 +17,14 @@ public class TechBuilder {
 
 //    public @Nullable ResourceLocation identifier;
 
-    public @Nullable ARestrictionType restriction;
+//    public @Nullable ARestrictionType restriction;
 
     public @Nullable int stage = -1;
     public List<ResourceLocation> parent = new ArrayList<>();
+    public @Nullable RecipeWrapper recipe;
 
-    @Deprecated
-    public List<ResourceLocation> child = new ArrayList<>();
+//    @Deprecated
+//    public List<ResourceLocation> child = new ArrayList<>();
 
 
     public static TechBuilder Builder(){
@@ -40,19 +42,27 @@ public class TechBuilder {
         return this;
     }
 
-    public TechBuilder setRestriction(ARestrictionType restriction) {
-        this.restriction = restriction;
 
-        return this;
-    }
+
+//    public TechBuilder setRestriction(ARestrictionType restriction) {
+//        this.restriction = restriction;
+//
+//        return this;
+//    }
 
 //    public void addChild(ResourceLocation child) {
 //        this.child.add(child);
 //    }
-
-    public void addParent(ResourceLocation parent) {
-        this.parent.add(parent);
+    public TechBuilder addRecipe(RecipeWrapper recipe) {
+        this.recipe = recipe;
+        return this;
     }
+
+    public TechBuilder addParent(ResourceLocation parent) {
+        this.parent.add(parent);
+        return this;
+    }
+
 
     public TechBuilder builder(){
         if (!validate()){
@@ -62,6 +72,6 @@ public class TechBuilder {
     }
 
     private boolean validate(){
-        return stage != -1 && restriction != null;
+        return stage != -1 && recipe != null;
     }
 }

@@ -27,7 +27,7 @@ public class RestrictionWight extends AbstractWidget {
     }
 
     public void renderBg(GuiGraphics context){
-        var texture = techInstance.getTech().getARestrictionTypeResource();
+        var texture = techInstance.getTech().getBgWithType();
         context.blit(texture,getX(),getY(),0,0,width,height);
     }
 }

@@ -6,6 +6,7 @@ import com.alessandro.astages.util.ARestrictionType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.eventbus.api.Event;
 import org.research.Research;
+import org.research.api.recipe.RecipeWrapper;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -28,7 +29,7 @@ public abstract class AbstractTech {
 
 
 
-    public AbstractTech(ResourceLocation identifier) {
+    public AbstractTech(@Nullable ResourceLocation identifier) {
         this.identifier = identifier;
     }
 
@@ -46,30 +47,18 @@ public abstract class AbstractTech {
     }
 
     public final ResourceLocation getIconResource(){
-        return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace(), "textures/gui/tech_icons/" + getId() + ".png");
+        return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace().intern(), "textures/gui/tech_icons/" + getId() + ".png");
     }
 
-    public final ResourceLocation getARestrictionTypeResource(){
-        return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace(),"textures/gui/restriction/" + getTechBuilder().restriction + ".png");
+//    public final ResourceLocation getARestrictionTypeResource(){
+//        return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace(),"textures/gui/restriction/" + getTechBuilder().restriction + ".png");
+//    }
+    public final ResourceLocation getBgWithType(){
+        return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace().intern(), "textures/gui/background/" + getTechBuilder().recipe.type().toString());
     }
 
-    public ARestrictionType getARestrictionType(){
-        return getTechBuilder().restriction;
-    }
 
     public abstract TechBuilder getTechBuilder();
-
-    /**
-     * 解锁调用
-     * @param event
-     */
-    public abstract void eventHandle(Event event);
-
-
-    /**
-     * 在初始化时锁定
-     */
-    public abstract void restriction();
 
 
 }

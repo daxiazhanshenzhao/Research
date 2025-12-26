@@ -67,4 +67,13 @@ public interface ITechTreeCapability<T> {
      * @param itemStack 变动的物品
      */
     void tryComplete(ItemStack itemStack);
+
+
+    /**
+     *
+     * @param tech
+     */
+    void focus(AbstractTech tech);
+
+    ResourceLocation getFocus();
 }

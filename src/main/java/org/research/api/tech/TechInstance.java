@@ -9,7 +9,9 @@ import net.minecraftforge.common.MinecraftForge;
 import org.research.Research;
 import org.research.api.event.custom.ChangeTechStageEvent;
 import org.research.api.init.TechInit;
+import org.research.api.recipe.RecipeWrapper;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
@@ -20,10 +22,11 @@ public class TechInstance implements Comparable<TechInstance> {
     public static final String ID = "tech_id";
     public static final String STATE = "tech_state";
     public static final String FOCUS = "tech_focus";
+    public static final TechInstance EMPTY = new TechInstance(TechInit.EMPTY,null);
 
     private AbstractTech tech;
 
-    private ServerPlayer serverPlayer;
+    private ServerPlayer serverPlayer = null;
 
 
     /**
@@ -42,7 +45,6 @@ public class TechInstance implements Comparable<TechInstance> {
     public TechInstance(ResourceLocation resourceLocation, Integer stageValue, Boolean focused) {
         this.tech = TechInit.getTech(resourceLocation);
         this.stateValue = stageValue;
-        this.serverPlayer = null;
         this.focused = focused;
     }
 
@@ -154,7 +156,9 @@ public class TechInstance implements Comparable<TechInstance> {
 
 
 
-
+    public RecipeWrapper getRecipe() {
+        return getTech().getTechBuilder().recipe;
+    }
 
 
     public boolean isFocused() {
@@ -165,9 +169,9 @@ public class TechInstance implements Comparable<TechInstance> {
         return stateValue;
     }
 
-    public ARestrictionType getARestrictionType() {
-        return tech.getTechBuilder().restriction;
-    }
+//    public ARestrictionType getARestrictionType() {
+//        return tech.getTechBuilder().restriction;
+//    }
 
     public static final Codec<TechInstance> CODEC = RecordCodecBuilder.create(instance ->
         instance.group(

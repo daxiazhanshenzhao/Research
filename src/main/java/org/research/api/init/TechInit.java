@@ -14,6 +14,8 @@ import net.minecraftforge.registries.RegistryObject;
 import org.research.Research;
 import org.research.api.tech.AbstractTech;
 import org.research.api.tech.EmptyTech;
+import org.research.tech.IronTech;
+import org.research.tech.RedStoneTech;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -68,7 +70,7 @@ public class TechInit {
     }
 
     public static RegistryObject<AbstractTech> FIRST_TECH = registerTech(EMPTY);
-
-
+    public static RegistryObject<AbstractTech> APP_TECH = registerTech(new RedStoneTech());
+    public static RegistryObject<AbstractTech> IRON_TECH = registerTech(new IronTech());
 
 }

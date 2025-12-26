@@ -19,8 +19,14 @@ public class Research {
 
     public static final Logger LOGGER = LogUtils.getLogger();
 
-
+    /**
+     *
+     * @param path 不能有大写字母
+     * @return
+     */
     public static ResourceLocation asResource(String path){
+
+
         return ResourceLocation.fromNamespaceAndPath(MODID,path);
     }
 

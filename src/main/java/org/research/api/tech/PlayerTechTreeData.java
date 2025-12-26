@@ -13,6 +13,7 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraftforge.common.util.LazyOptional;
 import org.joml.Vector2i;
 import org.research.Research;
+import org.research.api.event.custom.CompleteTechEvent;
 import org.research.api.init.TechInit;
 import org.research.api.recipe.IRecipe;
 import org.research.api.tech.capability.ITechTreeCapability;
@@ -135,20 +136,48 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     @Override
     public void tryComplete(ItemStack itemStack) {
         for (TechInstance tech : techMap.values()) {
-            if (tech.getTech() instanceof IRecipe recipeWrapper){
-                var recipeWrapperData = recipeWrapper.getRecipe();
-                var registryAccess = player.server.registryAccess();
-                var recipe = IRecipe.getRecipeFromWrapper(recipeWrapperData, player.server);
-                if (recipe != null) {
-                    ItemStack recipeOutput = recipe.getResultItem(registryAccess);
-                    if (ItemStack.isSameItemSameTags(recipeOutput, itemStack)) {
-                        tech.setTechState(TechState.COMPLETED);
-                        tryNext(tech.getTech());
-                    }
+
+            var recipeWrapperData = tech.getRecipe();
+            var registryAccess = player.server.registryAccess();
+            var recipe = IRecipe.getRecipeFromWrapper(recipeWrapperData, player.server);
+            if (recipe != null) {
+                ItemStack recipeOutput = recipe.getResultItem(registryAccess);
+                if (ItemStack.isSameItemSameTags(recipeOutput, itemStack)) {
+
+                    tech.setTechState(TechState.COMPLETED);
+
+                    focus(tech.getTech());
+                    tryNext(tech.getTech());
+
                 }
             }
+
         }
     }
+
+    @Override
+    public ResourceLocation getFocus() {
+        for (TechInstance tech : techMap.values()) {
+            if (tech.isFocused()){
+                return tech.getIdentifier();
+            }
+        }
+        return TechInstance.EMPTY.getIdentifier();
+    }
+
+
+    @Override
+    public void focus(AbstractTech tech) {
+        //遍历所有将focus设置为false
+        for (var instance: techMap.values()) {
+            if (instance.isFocused()){
+                instance.setFocused(false);
+            }
+        }
+        techMap.get(tech.getIdentifier()).setFocused(true);
+    }
+
+
 
     //TODO : 等AI额度恢复了来写最复杂的逻辑
     //TOD0 : 没想好怎么写关注切换的问题
@@ -156,8 +185,6 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     public void tryNext(AbstractTech tech) {
         var instance = techMap.getOrDefault(tech.getIdentifier(),null);
         if (instance != null) {
-
-
 
             //遍历科技树的所有的父节点
             List<ResourceLocation> techChildList = new ArrayList<>();
@@ -190,13 +217,16 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
         }
     }
 
+    //
     @Override
     public void tick(ServerPlayer player, int tickCount) {
         autoSync();
     }
 
+    //TODO :自动升级同一阶段科技
+    private void syncStage(){
 
-
+    }
 
     /**
      * 比较差异来快速同步
@@ -224,8 +254,6 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                     cacheds.put(id, tech);
                     syncToClient();
                 }
-
-
             }
         }
 
