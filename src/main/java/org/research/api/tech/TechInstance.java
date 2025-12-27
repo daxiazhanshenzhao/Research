@@ -25,7 +25,6 @@ public class TechInstance implements Comparable<TechInstance> {
     public static final TechInstance EMPTY = new TechInstance(TechInit.EMPTY,null);
 
     private AbstractTech tech;
-
     private ServerPlayer serverPlayer = null;
 
 
@@ -84,6 +83,24 @@ public class TechInstance implements Comparable<TechInstance> {
         return serverPlayer;
     }
 
+    /**
+     * 获取当前科技实例的所有父节点（前置科技）。
+     * <p>
+     * 父节点是解锁当前科技必须先完成的前置科技。该方法从科技的 {@link TechBuilder}
+     * 中获取父节点列表。
+     * </p>
+     * <p>
+     * <b>注意：</b>该方法返回的是当前科技实例的父节点，如果需要获取其他科技的父节点，
+     * 请使用 {@link org.research.api.tech.capability.ITechTreeCapability#getParents(AbstractTech)}。
+     * </p>
+     *
+     * @return 包含所有父节点资源位置的列表。如果科技没有父节点，返回空列表。
+     *         列表中的顺序与 {@link TechBuilder} 中添加的顺序一致。
+     *
+     * @see org.research.api.tech.capability.ITechTreeCapability#getParents(AbstractTech)
+     * @see TechBuilder#parent
+     * @see ResourceLocation
+     */
     public List<ResourceLocation> getParents() {
         return tech.getTechBuilder().parent;
     }

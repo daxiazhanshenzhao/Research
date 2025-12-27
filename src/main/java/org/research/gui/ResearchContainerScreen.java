@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.checkerframework.checker.signature.qual.Identifier;
 import org.joml.Vector2i;
+import org.research.api.tech.SyncData;
 import org.research.api.tech.TechInstance;
 import org.research.api.tech.capability.ITechTreeCapability;
 import org.research.api.util.BlitContext;
@@ -18,7 +19,7 @@ import java.util.HashMap;
 
 public abstract class ResearchContainerScreen extends Screen {
 
-    private ITechTreeCapability techData;
+    private SyncData data;
 
 
     private HashMap<ResourceLocation, TechSlot> techSlotMap = new HashMap<>();
@@ -28,8 +29,9 @@ public abstract class ResearchContainerScreen extends Screen {
     }
 
 
-
-
+    public void setData(SyncData data) {
+        this.data = data;
+    }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {

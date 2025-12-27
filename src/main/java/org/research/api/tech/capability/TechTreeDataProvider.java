@@ -93,8 +93,8 @@ public class TechTreeDataProvider implements ICapabilitySerializable<CompoundTag
                 data.setPlayer(serverPlayer);
             });
         }
-
     }
+
 
 
 }

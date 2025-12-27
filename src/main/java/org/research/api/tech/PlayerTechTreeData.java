@@ -1,28 +1,21 @@
 package org.research.api.tech;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.RecipeManager;
-import net.minecraftforge.common.util.LazyOptional;
-import org.joml.Vector2i;
-import org.research.Research;
-import org.research.api.event.custom.CompleteTechEvent;
 import org.research.api.init.TechInit;
 import org.research.api.recipe.IRecipe;
 import org.research.api.tech.capability.ITechTreeCapability;
-import org.research.api.tech.graphTree.GraphAdjList;
 import org.research.api.tech.graphTree.Vec2i;
 
 import java.util.*;
 
-import static org.apache.logging.log4j.core.async.ThreadNameCachingStrategy.CACHED;
 import static org.research.api.tech.capability.TechTreeDataProvider.*;
 
 //只在服务端控制
@@ -58,33 +51,6 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
 
     }
-
-
-
-//    /**
-//     * 将注册项初始化为图表，
-//     * 每次启动的时候都要重新初始化，不需要持久化存储
-//     */
-//    public void init() {
-//        // 先插入顶点
-//        for (TechInstance tech : techMap.values()) {
-//            insertVex(tech);
-//        }
-//
-//        // 再插入边
-//        for (TechInstance tech : techMap.values()) {
-//            List<ResourceLocation> parents = tech.getParents();
-//            if (parents != null && !parents.isEmpty()) {
-//                for (ResourceLocation parentId : parents) {
-//                    TechInstance parentTech = techMap.get(parentId);
-//                    if (parentTech != null) {
-//                        // 插入从父节点到当前节点的边
-//                        insertEdge(parentTech, tech);
-//                    }
-//                }
-//            }
-//        }
-//    }
 
     @Override
     public TechInstance getFirstTech() {
@@ -127,8 +93,6 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
             techMap.remove(tech.getIdentifier());
             vecMap.remove(tech.getIdentifier());
         }
-
-
         return this;
     }
 
@@ -155,6 +119,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
                     focus(tech.getTech());
                     tryNext(tech.getTech());
+
 
                 }
             }
@@ -186,42 +151,56 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
 
 
-    //TODO : 等AI额度恢复了来写最复杂的逻辑
-    //TOD0 : 没想好怎么写关注切换的问题
     @Override
     public void tryNext(AbstractTech tech) {
-        var instance = techMap.getOrDefault(tech.getIdentifier(),null);
-        if (instance != null) {
-
-            //遍历科技树的所有的父节点
-            List<ResourceLocation> techChildList = new ArrayList<>();
-            for (TechInstance techInstance : techMap.values()){
-                List<ResourceLocation> parents = techInstance.getParents();
-                if (parents != null
-                        && !parents.isEmpty()
-                        && parents.equals(tech.getIdentifier())){
-
-                    techChildList.add(techInstance.getIdentifier());
-                }
-            };
-
-            //1.没有任意parens节点
-            if (techChildList.isEmpty()) return;
-            //2.有一个
-            if (techChildList.size() == 1) {
-                instance.setTechState(TechState.COMPLETED);
-                techMap.get(techChildList.get(0)).setTechState(TechState.AVAILABLE);
-
-            }
-            //3.多个节点
-            if (techChildList.size()>1){
-                instance.setTechState(TechState.WAITING);
-                for (ResourceLocation techChild : techChildList) {
-                    techMap.get(techChild).setTechState(TechState.AVAILABLE);
-                }
-            }
-
+        var instance = techMap.getOrDefault(tech.getIdentifier(), null);
+        if (instance == null) {
+            return; // 科技不存在，直接返回
         }
+
+        // 获取当前科技的所有子节点
+        List<ResourceLocation> children = getChildren(tech);
+        
+        // 1. 没有子节点：直接返回，保持当前状态
+        if (children.isEmpty()) {
+            return;
+        }
+        
+        // 2. 只有一个子节点：当前科技保持完成状态，子节点变为可用
+        if (children.size() == 1) {
+            // 当前科技应该已经是 COMPLETED 状态（由 tryComplete 设置）
+            // 确保当前科技是 COMPLETED 状态
+            if (instance.getState() != TechState.COMPLETED) {
+                instance.setTechState(TechState.COMPLETED);
+            }
+            
+            // 子节点变为可用状态
+            ResourceLocation childId = children.get(0);
+            TechInstance childInstance = techMap.get(childId);
+            if (childInstance != null && childInstance.getState() == TechState.LOCKED) {
+                childInstance.setTechState(TechState.AVAILABLE);
+
+                syncStage(childInstance.getTech());
+            }
+        }
+        
+        // 3. 有多个子节点：当前科技进入等待选择状态，所有子节点变为可用
+        if (children.size() > 1) {
+            // 当前科技进入等待选择状态
+            instance.setTechState(TechState.WAITING);
+            
+            // 所有子节点变为可用状态
+            for (ResourceLocation childId : children) {
+                TechInstance childInstance = techMap.get(childId);
+                if (childInstance != null && childInstance.getState() == TechState.LOCKED) {
+                    childInstance.setTechState(TechState.AVAILABLE);
+
+                    syncStage(childInstance.getTech());
+                }
+            }
+        }
+
+
     }
 
     //
@@ -230,9 +209,102 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
         autoSync();
     }
 
-    //TODO :自动升级同一阶段科技
-    private void syncStage(){
+    /**
+     * 同步同一阶段的科技，1.没有父节点，2，锁定状态
+     * @param tech
+     */
+    private void syncStage(AbstractTech tech){
 
+        //如果父节点没有科技就升级
+        if (getParents(tech).isEmpty() && getStages(tech).size() >1) {
+            for (TechInstance instance : techMap.values()) {
+                if (getStages(tech).equals(instance.getIdentifier()) && instance.getState().equals(TechState.LOCKED)){
+                    instance.setTechState(TechState.AVAILABLE);
+                }
+            }
+        }
+    }
+
+    @Override
+    public List<ResourceLocation> getStages(AbstractTech tech) {
+        if (tech == null) {
+            throw new IllegalArgumentException("科技不能为null");
+        }
+        
+        TechBuilder builder = tech.getTechBuilder();
+        if (builder == null || builder.stage == -1) {
+            return List.of();
+        }
+        
+        // 获取同一阶段的所有科技（包含自身）
+        return getStages(builder.stage);
+    }
+
+    @Override
+    public List<ResourceLocation> getStages(int stage) {
+        List<ResourceLocation> result = new ArrayList<>();
+        
+        // 遍历所有科技实例，查找阶段匹配的科技
+        for (TechInstance techInstance : techMap.values()) {
+            AbstractTech tech = techInstance.getTech();
+            TechBuilder builder = tech.getTechBuilder();
+            
+            // 检查阶段是否匹配（注意：stage为-1表示未设置阶段）
+            if (builder != null && builder.stage != -1 && builder.stage == stage) {
+                result.add(tech.getIdentifier());
+            }
+        }
+        
+        return result;
+    }
+
+    @Override
+    public Pair<List<ResourceLocation>, List<ResourceLocation>> getDependencies(AbstractTech tech) {
+        if (tech == null) {
+            throw new IllegalArgumentException("科技不能为null");
+        }
+
+        List<ResourceLocation> parents = getParents(tech);
+        List<ResourceLocation> children = getChildren(tech);
+
+        return Pair.of(parents, children);
+    }
+
+    @Override
+    public List<ResourceLocation> getChildren(AbstractTech tech) {
+        if (tech == null) {
+            throw new IllegalArgumentException("科技不能为null");
+        }
+        
+        ResourceLocation targetId = tech.getIdentifier();
+        List<ResourceLocation> children = new ArrayList<>();
+        
+        // 遍历所有科技实例，查找父节点包含目标科技的实例
+        for (TechInstance techInstance : techMap.values()) {
+            List<ResourceLocation> parents = techInstance.getParents();
+            if (parents != null && !parents.isEmpty()) {
+                // 检查父节点列表中是否包含目标科技
+                if (parents.contains(targetId)) {
+                    children.add(techInstance.getIdentifier());
+                }
+            }
+        }
+        
+        return children;
+    }
+
+    @Override
+    public List<ResourceLocation> getParents(AbstractTech tech) {
+        if (tech == null) {
+            throw new IllegalArgumentException("科技不能为null");
+        }
+        
+        TechInstance instance = techMap.get(tech.getIdentifier());
+        if (instance == null) {
+            return List.of(); // 如果科技不存在，返回空列表
+        }
+        
+        return instance.getParents(); // 直接从TechInstance获取父节点列表
     }
 
     /**
@@ -286,7 +358,25 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     }
     @Override
     public void syncToClient() {
+        syncData.sync();
+    }
 
+
+
+    /**
+     * syncData
+     */
+    private SyncData syncData;
+
+    public SyncData getSyncData() {
+        if (syncData == null) {
+            syncData = new SyncData(player);
+        }
+
+        return syncData;
+    }
+    public void setSyncData(SyncData syncData) {
+        this.syncData = syncData;
     }
 
 
@@ -296,6 +386,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                 Codec.unboundedMap(ResourceLocation.CODEC, Vec2i.CODEC).fieldOf(VEC).forGetter(PlayerTechTreeData::getVecMap),
                 Codec.INT.fieldOf(STAGE).forGetter(PlayerTechTreeData::getStage)
         ).apply(instance,PlayerTechTreeData::new));
+
+
 
     @Override
     public Map<ResourceLocation, TechInstance> getCacheds() {
@@ -312,7 +404,12 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
             var dataResult = PlayerTechTreeData.CODEC.encodeStart(NbtOps.INSTANCE, this);
-            dataResult.result().ifPresent(nbt->tag.put(TREE_DATA, nbt));
+
+            dataResult.result().ifPresent(nbt->{
+                tag.put(STAGE, nbt);
+                getSyncData().saveNbt(tag);
+            });
+
         return tag;
     }
 
@@ -327,6 +424,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                     this.vecMap = playerTechTreeData.getVecMap();
                 }
         );
+
+        getSyncData().loadNbt(compoundTag);
     }
 
     public int getStage() {

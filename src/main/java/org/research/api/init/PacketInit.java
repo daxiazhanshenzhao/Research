@@ -1,12 +1,16 @@
 package org.research.api.init;
 
 
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 import org.research.Research;
 import org.research.api.util.ResearchApi;
+import org.research.network.ClientboundSyncPlayerData;
 
 @Mod.EventBusSubscriber
 public class PacketInit {
@@ -27,7 +31,15 @@ public class PacketInit {
 
         INSTANCE = net;
 
-
+        net.messageBuilder(ClientboundSyncPlayerData.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(ClientboundSyncPlayerData::new)
+                .encoder(ClientboundSyncPlayerData::toBytes)
+                .consumerMainThread(ClientboundSyncPlayerData::handle)
+                .add();
     }
 
+
+    public static <T> void sendToPlayer(T data, ServerPlayer player) {
+        INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), data);
+    }
 }
