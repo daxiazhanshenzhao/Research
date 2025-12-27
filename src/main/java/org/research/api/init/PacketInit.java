@@ -42,7 +42,7 @@ public class PacketInit {
 
 
         net.messageBuilder(OpenScreenPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .decoder(OpenScreenPacket::decode)
+                .decoder(OpenScreenPacket::new)
                 .encoder(OpenScreenPacket::encode)
                 .consumerMainThread(OpenScreenPacket::handle)
                 .add();

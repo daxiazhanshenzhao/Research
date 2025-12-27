@@ -13,33 +13,26 @@ import org.research.gui.ResearchScreen;
 
 import java.util.function.Supplier;
 
+/*
+    服务端发送
+ */
 public class OpenScreenPacket {
 
     private SyncData syncData;
 
-    public OpenScreenPacket(SyncData syncData) {
-        this.syncData = syncData;
+    public OpenScreenPacket(FriendlyByteBuf buf) {
+        this.syncData = SyncData.SYNCED_SPELL_DATA.read(buf);
     }
 
-    public static void encode(OpenScreenPacket msg, FriendlyByteBuf buf) {
-        SyncData.SYNCED_SPELL_DATA.write(buf, msg.syncData);
+    public void encode(FriendlyByteBuf buf) {
+        SyncData.SYNCED_SPELL_DATA.write(buf, syncData);
     }
 
-    public static OpenScreenPacket decode(FriendlyByteBuf buf) {
-        return new OpenScreenPacket(SyncData.SYNCED_SPELL_DATA.read(buf));
-    }
 
-    public static void handle(OpenScreenPacket msg, Supplier<NetworkEvent.Context> ctx) {
+    public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            ServerPlayer sender = ctx.get().getSender();
-            if (sender != null) {
-                sender.getCapability(CapInit.ResearchData).ifPresent(researchData -> {
-                    var data = researchData.getSyncData();
-                    Minecraft.getInstance().setScreen(new ResearchScreen(msg.syncData));
-                });
-
-            }
+            Minecraft.getInstance().setScreen(new ResearchScreen(syncData));
         });
-        ctx.get().setPacketHandled(true);
+        return true;
     }
 }

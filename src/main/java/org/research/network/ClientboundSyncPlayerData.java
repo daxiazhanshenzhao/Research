@@ -6,7 +6,9 @@ import org.research.api.tech.SyncData;
 
 import java.util.function.Supplier;
 
+//将服务端数据给客户端
 public class ClientboundSyncPlayerData {
+
     SyncData syncData;
 
     public ClientboundSyncPlayerData(SyncData syncData) {
@@ -27,7 +29,6 @@ public class ClientboundSyncPlayerData {
         context.enqueueWork(() -> {
 
         });
-
         return true;
     }
 
