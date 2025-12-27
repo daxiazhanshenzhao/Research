@@ -6,16 +6,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataSerializer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
 import org.research.api.init.PacketInit;
 import org.research.api.tech.graphTree.Vec2i;
 import org.research.network.ClientboundSyncPlayerData;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,6 +39,13 @@ public class SyncData {
         this.player = null;
         this.playerId = serverPlayerId;
 
+    }
+
+    public SyncData(PlayerTechTreeData treeData) {
+        this(treeData.getPlayer());
+        this.cacheds = treeData.getCacheds();
+        this.vecMap = treeData.getVecMap();
+        this.stage = treeData.getStage();
     }
 
     //服务端发送
@@ -149,7 +153,7 @@ public class SyncData {
         return player;
     }
 
-    public void sync(){
+    public void syncToClient(){
         PacketInit.sendToPlayer(new ClientboundSyncPlayerData(this),player);
     }
 }

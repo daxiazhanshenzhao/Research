@@ -358,25 +358,17 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     }
     @Override
     public void syncToClient() {
-        syncData.sync();
+        getSyncData().syncToClient();
     }
 
 
 
-    /**
-     * syncData
-     */
-    private SyncData syncData;
+
+
+
 
     public SyncData getSyncData() {
-        if (syncData == null) {
-            syncData = new SyncData(player);
-        }
-
-        return syncData;
-    }
-    public void setSyncData(SyncData syncData) {
-        this.syncData = syncData;
+        return new SyncData(this);
     }
 
 
@@ -435,4 +427,9 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     public void setPlayer(ServerPlayer player) {
         this.player = player;
     }
+
+    public ServerPlayer getPlayer() {
+        return player;
+    }
+
 }

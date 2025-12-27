@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 public class ClientboundSyncPlayerData {
     SyncData syncData;
 
-    public  ClientboundSyncPlayerData(SyncData syncData) {
+    public ClientboundSyncPlayerData(SyncData syncData) {
         this.syncData = syncData;
     }
 

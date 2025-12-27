@@ -5,6 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.research.Research;
+import org.research.api.tech.SyncData;
 import org.research.api.util.BlitContext;
 import org.research.api.util.Texture;
 import org.research.player.inventory.ResearchContainer;
@@ -13,8 +14,8 @@ import org.research.player.inventory.ResearchContainer;
 public class ResearchScreen extends ResearchContainerScreen {
 
 
-    public ResearchScreen() {
-
+    public ResearchScreen(SyncData syncData) {
+        super(syncData);
 
     }
 

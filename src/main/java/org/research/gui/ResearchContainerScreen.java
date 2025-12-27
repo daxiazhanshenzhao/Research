@@ -22,10 +22,9 @@ public abstract class ResearchContainerScreen extends Screen {
     private SyncData data;
 
 
-    private HashMap<ResourceLocation, TechSlot> techSlotMap = new HashMap<>();
-
-    protected ResearchContainerScreen() {
+    protected ResearchContainerScreen(SyncData data) {
         super(Component.empty());
+        this.data = data;
     }
 
 

@@ -11,6 +11,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import org.research.Research;
 import org.research.api.util.ResearchApi;
 import org.research.network.ClientboundSyncPlayerData;
+import org.research.network.OpenScreenPacket;
 
 @Mod.EventBusSubscriber
 public class PacketInit {
@@ -31,11 +32,22 @@ public class PacketInit {
 
         INSTANCE = net;
 
+
+        //server -> client
         net.messageBuilder(ClientboundSyncPlayerData.class, id(), NetworkDirection.PLAY_TO_CLIENT)
                 .decoder(ClientboundSyncPlayerData::new)
                 .encoder(ClientboundSyncPlayerData::toBytes)
                 .consumerMainThread(ClientboundSyncPlayerData::handle)
                 .add();
+
+
+        net.messageBuilder(OpenScreenPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(OpenScreenPacket::decode)
+                .encoder(OpenScreenPacket::encode)
+                .consumerMainThread(OpenScreenPacket::handle)
+                .add();
+
+        //client -> server
     }
 
 
