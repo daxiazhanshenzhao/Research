@@ -1,7 +1,8 @@
-package org.research.network;
+package org.research.network.research;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
+import org.research.api.client.ClientResearchData;
 import org.research.api.tech.SyncData;
 
 import java.util.function.Supplier;
@@ -13,6 +14,9 @@ public class ClientboundSyncPlayerData {
 
     public ClientboundSyncPlayerData(SyncData syncData) {
         this.syncData = syncData;
+    }
+    public ClientboundSyncPlayerData() {
+        // 空构造函数用于网络序列化
     }
 
     public ClientboundSyncPlayerData(FriendlyByteBuf buf){
@@ -27,7 +31,7 @@ public class ClientboundSyncPlayerData {
         NetworkEvent.Context context = supplier.get();
 
         context.enqueueWork(() -> {
-
+            ClientResearchData.playerSyncedDataLookup.put(syncData.getPlayerId(), syncData);
         });
         return true;
     }

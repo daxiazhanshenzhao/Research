@@ -54,7 +54,7 @@ public abstract class AbstractTech {
 //        return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace(),"textures/gui/restriction/" + getTechBuilder().restriction + ".png");
 //    }
     public final ResourceLocation getBgWithType(){
-        return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace().intern(), "textures/gui/background/" + getTechBuilder().recipe.type().toString());
+        return ResourceLocation.fromNamespaceAndPath(getIdentifier().getNamespace().intern(), "textures/gui/background/" + getTechBuilder().recipe.type().toString()+ ".png");
     }
 
 

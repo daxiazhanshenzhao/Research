@@ -16,6 +16,8 @@ public class Vec2i extends Vector2i {
     public static final String X = "x";
     public static final String Y = "y";
 
+    public static final Vec2i EMPTY = new Vec2i(0, 0);
+
     public static final Codec<Vec2i> CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
             Codec.INT.fieldOf(X).forGetter(Vec2i::x),

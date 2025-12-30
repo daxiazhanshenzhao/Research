@@ -49,5 +49,9 @@ public class ResearchScreen extends ResearchContainerScreen {
         return null;
     }
 
+    @Override
+    public void tick() {
 
+        super.tick();
+    }
 }

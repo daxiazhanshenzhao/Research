@@ -5,14 +5,12 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import org.joml.Vector2i;
 import org.research.api.tech.AbstractTech;
 import org.research.api.tech.SyncData;
 import org.research.api.tech.TechInstance;
 import org.research.api.tech.TechState;
 import org.research.api.tech.graphTree.Vec2i;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 

@@ -11,7 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import org.research.api.init.PacketInit;
 import org.research.api.tech.graphTree.Vec2i;
-import org.research.network.ClientboundSyncPlayerData;
+import org.research.network.research.ClientboundSyncPlayerData;
 
 import java.util.HashMap;
 import java.util.Map;

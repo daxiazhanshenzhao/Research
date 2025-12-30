@@ -7,7 +7,9 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import org.research.api.init.PacketInit;
 import org.research.api.init.TechInit;
 import org.slf4j.Logger;
 
@@ -38,12 +40,17 @@ public class Research {
         TechInit.register(modEventBus);
 
         modEventBus.addListener(this::setupClient);
+        modEventBus.addListener(this::commonSetup);
         
     }
     private void setupClient(FMLClientSetupEvent evt) {
         evt.enqueueWork(() -> {
 
         });
+    }
+
+    private void commonSetup(FMLCommonSetupEvent evt) {
+        evt.enqueueWork(PacketInit::register);
     }
 
 }

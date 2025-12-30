@@ -21,7 +21,7 @@ public class KeyMappingInit {
 
 
     static {
-        OPEN_RESEARCH_SCREEN = Lazy.of(()->new OpenScreen(ScreenProvider.getResearchScreen()));
+        OPEN_RESEARCH_SCREEN = Lazy.of(OpenScreen::new);
     }
 
 

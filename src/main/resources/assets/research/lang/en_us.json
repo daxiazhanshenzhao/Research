@@ -1,5 +1,10 @@
 {
   "key.research.open_research_screen": "Open Research Screen",
 
-  "key.categories.research": "Research"
+  "key.categories.research": "Research",
+
+  "commands.research.open.success.self": "Opened research screen for yourself",
+  "commands.research.open.success.other" : "Opened research screen for %s",
+  "commands.research.open.player_not_found": "Player not found"
+
 }
