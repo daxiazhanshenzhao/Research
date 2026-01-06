@@ -9,19 +9,14 @@ public class Texture {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Research.MODID, "textures/gui/research.png");
 
     private static final ResourceLocation BACKGROUND = Research.asResource( "textures/gui/background.png");
+    private static final ResourceLocation INSIDE = Research.asResource( "textures/gui/inside.png");
 
 
     public static final BlitContext background = new BlitContext(BACKGROUND,0,0,256,256);
 
+    public static final BlitContext window = new BlitContext(BACKGROUND,15,28,226,187);
+    public static final BlitContext inside = new BlitContext(INSIDE,0,0,474,292);
 
 
 
-
-    public static void renderBlit(int x,int y,GuiGraphics context, BlitContext rect){
-        context.blit(TEXTURE,x,y,rect.u(),rect.v(),rect.width(),rect.height());
-    }
-
-    public static void renderBg(int x,int y,GuiGraphics context){
-        context.blit(BACKGROUND,x,y,background.u(),background.v(),background.width(),background.height());
-    }
 }

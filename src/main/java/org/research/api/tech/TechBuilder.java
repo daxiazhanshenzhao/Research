@@ -1,8 +1,6 @@
 package org.research.api.tech;
 
-import com.alessandro.astages.core.stage.AStage;
-import com.alessandro.astages.core.stage.AStageManager;
-import com.alessandro.astages.util.ARestrictionType;
+
 import net.minecraft.resources.ResourceLocation;
 import org.research.api.recipe.RecipeWrapper;
 

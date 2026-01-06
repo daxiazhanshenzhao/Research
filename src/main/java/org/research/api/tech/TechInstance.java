@@ -1,6 +1,6 @@
 package org.research.api.tech;
 
-import com.alessandro.astages.util.ARestrictionType;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;

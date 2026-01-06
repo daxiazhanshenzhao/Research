@@ -1,5 +1,6 @@
 package org.research.gui;
 
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
@@ -35,22 +36,29 @@ public class ResearchScreen extends ResearchContainerScreen {
     }
 
     @Override
+    protected Pair<Float, Float> getMaxOrMinScale() {
+        return Pair.of(0.5f,2f);
+    }
+
+    @Override
     public BlitContext getBg() {
         return Texture.background;
     }
 
     @Override
-    public BlitContext getWindow() {
-        return null;
+    protected BlitContext getWindow() {
+        return Texture.window;
     }
 
     @Override
-    public BlitContext getInside() {
-        return null;
+    protected BlitContext getInside() {
+        return Texture.inside;
     }
+
 
     @Override
     public void tick() {
+
 
         super.tick();
     }

@@ -1,6 +1,5 @@
 package org.research.gui.component;
 
-import com.alessandro.astages.util.ARestrictionType;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -18,7 +17,6 @@ public class RestrictionWight extends AbstractWidget {
     @Override
     protected void renderWidget(GuiGraphics guiGraphics, int i, int i1, float v) {
         renderBg(guiGraphics);
-
     }
 
     @Override
