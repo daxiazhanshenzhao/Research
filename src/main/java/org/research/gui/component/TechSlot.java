@@ -44,4 +44,6 @@ public class TechSlot extends AbstractButton {
     protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
 
     }
+
+
 }

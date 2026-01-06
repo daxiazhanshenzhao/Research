@@ -24,6 +24,8 @@ import org.joml.Math;
 public abstract class ResearchContainerScreen extends Screen {
     //data
     private SyncData data;
+
+    @Deprecated
     private Map<ResourceLocation,TechSlot> slots = new HashMap<>();
 
     //render
@@ -34,6 +36,10 @@ public abstract class ResearchContainerScreen extends Screen {
 
     private float offsetX = 0, offsetY = 0;  // 拖拽偏移量
     private int guiLeft,guiTop;
+
+    // 缓存转换后的鼠标坐标，用于所有鼠标事件
+    private int transformedMouseX = 0;
+    private int transformedMouseY = 0;
 
     protected ResearchContainerScreen(SyncData data) {
         super(Component.empty());
@@ -88,6 +94,45 @@ public abstract class ResearchContainerScreen extends Screen {
     private void handleCenter() {
 
 
+    }
+
+    /**
+     * 将屏幕空间的鼠标坐标转换为变换后的世界空间坐标
+     * @param screenX 屏幕空间的X坐标
+     * @param screenY 屏幕空间的Y坐标
+     */
+    private void updateTransformedMouseCoords(double screenX, double screenY) {
+        // 获取窗口信息
+        var windowContext = getWindow();
+        int windowX = guiLeft + windowContext.u();
+        int windowY = guiTop + windowContext.v();
+        int windowWidth = windowContext.width();
+        int windowHeight = windowContext.height();
+
+        // 计算窗口中心点
+        int centerX = windowX + windowWidth / 2;
+        int centerY = windowY + windowHeight / 2;
+
+        // 逆向应用变换
+        // 步骤1: 撤销拖拽偏移
+        float tempMouseX = (float)screenX - offsetX;
+        float tempMouseY = (float)screenY - offsetY;
+
+        // 步骤2: 将坐标移到缩放中心
+        tempMouseX -= centerX;
+        tempMouseY -= centerY;
+
+        // 步骤3: 撤销缩放（除以缩放比例）
+        tempMouseX /= scrollOffs;
+        tempMouseY /= scrollOffs;
+
+        // 步骤4: 移回原位置
+        tempMouseX += centerX;
+        tempMouseY += centerY;
+
+        // 保存转换后的坐标
+        this.transformedMouseX = (int) tempMouseX;
+        this.transformedMouseY = (int) tempMouseY;
     }
 
 
@@ -157,7 +202,66 @@ public abstract class ResearchContainerScreen extends Screen {
             }
         }
 
+        // 更新转换后的鼠标坐标
+        updateTransformedMouseCoords(mouseX, mouseY);
+
+        // 将事件传递给子组件
+        for (var child : children()) {
+            if (child.mouseDragged(transformedMouseX, transformedMouseY, button, dragX, dragY)) {
+                return true;
+            }
+        }
+
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // 更新转换后的鼠标坐标
+        updateTransformedMouseCoords(mouseX, mouseY);
+
+        // 如果正在拖拽，不处理点击
+        if (isDragging) {
+            return false;
+        }
+
+        // 将事件传递给子组件
+        for (var child : children()) {
+            if (child.mouseClicked(transformedMouseX, transformedMouseY, button)) {
+                return true;
+            }
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        // 更新转换后的鼠标坐标
+        updateTransformedMouseCoords(mouseX, mouseY);
+
+        // 重置拖拽状态
+        if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
+            isDragging = false;
+            dragTotal = 0;
+        }
+
+        // 将事件传递给子组件
+        for (var child : children()) {
+            if (child.mouseReleased(transformedMouseX, transformedMouseY, button)) {
+                return true;
+            }
+        }
+
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        // 更新转换后的鼠标坐标
+        updateTransformedMouseCoords(mouseX, mouseY);
+
+        super.mouseMoved(mouseX, mouseY);
     }
 
     /**
@@ -245,12 +349,14 @@ public abstract class ResearchContainerScreen extends Screen {
             insideContext.width(), insideContext.height()
         );
 
-        // 在变换后的坐标系中渲染所有槽位
-        // 注意：这里的 mouseX 和 mouseY 需要转换到变换后的坐标系
-        // 但 render 方法会自动处理鼠标悬停检测，所以直接传入原始坐标即可
+        // 更新转换后的鼠标坐标（用于渲染时的hover效果）
+        updateTransformedMouseCoords(mouseX, mouseY);
+
+        // 在变换后的坐标系中渲染所有槽位，使用转换后的鼠标坐标
         for (var renderable : renderables) {
-            renderable.render(context, mouseX, mouseY, partialTick);
+            renderable.render(context, transformedMouseX, transformedMouseY, partialTick);
         }
+
 
         pose.popPose();
         context.disableScissor();
