@@ -71,10 +71,11 @@ public interface ITechTreeCapability<T> {
 
 
     /**
-     *
-     * @param tech
+     * 设置聚焦或者不聚焦科技
+     * @param tech 科技
+     * @param isFocus 是否聚焦
      */
-    void focus(AbstractTech tech);
+    void focus(AbstractTech tech,boolean isFocus);
 
     ResourceLocation getFocus();
 

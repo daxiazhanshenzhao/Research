@@ -13,16 +13,20 @@ import java.util.function.Supplier;
  */
 public class ClientSetFocusPacket {
     private ResourceLocation focusTechId;
+    private boolean isFocus;
 
     public ClientSetFocusPacket(FriendlyByteBuf buf){
         this.focusTechId = buf.readResourceLocation();
+        this.isFocus = buf.readBoolean();
     }
-    public ClientSetFocusPacket(ResourceLocation focusTechId){
+    public ClientSetFocusPacket(ResourceLocation focusTechId,boolean isFocus){
         this.focusTechId = focusTechId;
+        this.isFocus = isFocus;
     }
 
     public void toBytes(FriendlyByteBuf buf){
         buf.writeResourceLocation(this.focusTechId);
+        buf.writeBoolean(this.isFocus);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> supplier){
@@ -38,7 +42,10 @@ public class ClientSetFocusPacket {
                 if (tech != null) {
                     // 获取玩家的科技树数据并设置聚焦
                     ResearchApi.getTechTreeData(sender).ifPresent(data -> {
-                        data.focus(tech);
+
+                        data.focus(tech,isFocus);
+
+                        data.syncToClient();
                     });
                 }
             }

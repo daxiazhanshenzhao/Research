@@ -123,7 +123,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
                     tech.setTechState(TechState.COMPLETED);
 
-                    focus(tech.getTech());
+                    focus(tech.getTech(),true);
                     tryNext(tech.getTech());
 
 
@@ -145,17 +145,30 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
 
     @Override
-    public void focus(AbstractTech tech) {
-        //遍历所有将focus设置为false
-        if (techMap.get(tech.getIdentifier()).getState().equals(TechState.LOCKED)) return;
+    public void focus(AbstractTech tech, boolean isFocus) {
+        // 检查科技是否存在
+        if (!techMap.containsKey(tech.getIdentifier())) {
+            return;
+        }
 
-        for (var instance: techMap.values()) {
-            if (instance.isFocused()){
-                instance.setFocused(false);
+        TechInstance instance = techMap.get(tech.getIdentifier());
+
+        // 如果要设置focus，但科技是LOCKED状态，则不允许设置服务端focus
+        if (isFocus && instance.getState().equals(TechState.LOCKED)) {
+            return;
+        }
+
+        // 取消所有其他科技的focus状态
+        for (var techInstance : techMap.values()) {
+            if (techInstance.isFocused()) {
+                techInstance.setFocused(false);
             }
         }
-        techMap.get(tech.getIdentifier()).setFocused(true);
+
+        // 设置当前科技的focus状态
+        instance.setFocused(isFocus);
     }
+
 
 
 

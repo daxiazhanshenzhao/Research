@@ -4,17 +4,13 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.advancements.AdvancementWidget;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 import org.research.Research;
 import org.research.api.client.ClientResearchData;
 import org.research.api.init.PacketInit;
-import org.research.api.tech.AbstractTech;
-import org.research.api.tech.SyncData;
-import org.research.api.tech.TechInstance;
-import org.research.api.tech.TechState;
+import org.research.api.tech.*;
 import org.research.api.tech.graphTree.Vec2i;
 import org.research.api.util.BlitContext;
 import org.research.gui.component.TechSlot;
@@ -33,11 +29,34 @@ public abstract class ResearchContainerScreen extends Screen {
 
     private Map<ResourceLocation,TechSlot> slots = new HashMap<>();
 
-    //双重focus机制，最多能同时存在两个focus，，一个是服务端的追踪状态，一个是客户端的查看信息状态，点击lock slot的时候就会出现不同步的情况，实际服务端追踪状态就是原来的没有锁定的，但是信息查看是客户端focus的slot，
+    /**
+     * 双重focus机制说明：
+     *
+     * 1. 客户端focus（focusSlot + TechSlot.clientFocus）：
+     *    - 用于UI显示和查看信息
+     *    - 任何状态的科技都可以设置
+     *    - 点击任何槽位都会设置客户端focus
+     *    - 显示FOCUS边框和黑色背景
+     *
+     * 2. 服务端focus（TechInstance.isFocused）：
+     *    - 用于追踪状态（游戏机制）
+     *    - 只有非LOCKED状态的科技可以设置
+     *    - 点击LOCKED槽位时不会设置服务端focus
+     *    - 服务端会拒绝LOCKED状态的focus请求
+     *
+     * 3. 不同步的情况：
+     *    - 点击LOCKED槽位时，客户端focus会设置，但服务端focus不会设置
+     *    - 此时客户端可以查看LOCKED科技的信息，但不会追踪它
+     *
+     * 4. 双击取消：
+     *    - 双击任何已focus的槽位会同时取消客户端和服务端的focus状态
+     */
     private TechSlot focusSlot;
     //render
 
     private float scrollOffs = 1f;  //缩放率，默认1f
+
+    private MouseHandleBgData mouseHandleBgData = MouseHandleBgData.EMPTY;
 
     private boolean isDragging = false;
 
@@ -63,6 +82,9 @@ public abstract class ResearchContainerScreen extends Screen {
         //同步
         ClientResearchData.syncFromServer();
         this.data = ClientResearchData.getSyncData();
+
+        this.mouseHandleBgData = new MouseHandleBgData();
+
 
         //科技槽位
         var insList = data.getCacheds();
@@ -454,13 +476,21 @@ public abstract class ResearchContainerScreen extends Screen {
     }
 
     /**
-     * 清除客户端focus状态（通过双击槽位触发）
+     * 清除双端focus状态（通过双击槽位触发）
+     * 同时清除客户端focus和服务端focus
      */
-    public void clearFocus() {
+    public void clearFocus(AbstractTech tech) {
+        // 清除客户端focus
         if (focusSlot != null) {
             focusSlot.setClientFocus(false);
             focusSlot = null;
         }
+
+        // 发送网络包到服务端，清除服务端focus
+        PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier(), false));
+
+        // 同步数据
+        syncData();
     }
 
     /**
@@ -470,35 +500,64 @@ public abstract class ResearchContainerScreen extends Screen {
      * 2. 服务端focus：用于追踪状态，只有非LOCKED的科技可以设置
      *
      * @param tech 要focus的科技
+     * @param isFocus 是否设置为focus状态
      */
-    public void focus(AbstractTech tech){
+    public void focus(AbstractTech tech, boolean isFocus) {
         if (!slots.containsKey(tech.getIdentifier())) {
             return;
         }
 
         TechSlot slot = slots.get(tech.getIdentifier());
-
-        // 1. 更新客户端focus（用于UI显示和查看信息）
-        // 取消之前的客户端focus
-        if (focusSlot != null) {
-            focusSlot.setClientFocus(false);
-        }
-
-        // 设置新的客户端focus
-        focusSlot = slot;
-        slot.setClientFocus(true);
-
-        // 2. 判断是否需要更新服务端focus（追踪状态）
-        // 只有当科技不是LOCKED状态时，才发送到服务端设置追踪状态
         TechInstance techInstance = slot.getTechInstance();
-        if (techInstance != null && techInstance.getState() != TechState.LOCKED) {
-            // 发送网络包到服务端，设置服务端的追踪状态
-            PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier()));
 
+        if (isFocus) {
+            // 设置focus状态
+
+            // 1. 更新客户端focus（用于UI显示和查看信息）
+            // 任何状态的科技都可以设置客户端focus
+            if (focusSlot != null && focusSlot != slot) {
+                // 取消之前的客户端focus
+                focusSlot.setClientFocus(false);
+            }
+
+            // 设置新的客户端focus
+            focusSlot = slot;
+            slot.setClientFocus(true);
+
+            // 2. 判断是否需要更新服务端focus（追踪状态）
+            // 只有当科技不是LOCKED状态时，才发送到服务端设置追踪状态
+            if (techInstance != null && techInstance.getState() != TechState.LOCKED) {
+                // 发送网络包到服务端，设置服务端的追踪状态
+                PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier(), true));
+            }
+            // 如果是LOCKED状态，则不发送到服务端，只保持客户端focus用于显示信息
+
+        } else {
+            // 取消focus状态
+
+            // 1. 取消客户端focus
+            if (focusSlot == slot) {
+                focusSlot.setClientFocus(false);
+                focusSlot = null;
+            }
+
+            // 2. 发送到服务端取消追踪状态（无论是否LOCKED都发送，确保服务端状态正确）
+            PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier(), false));
         }
+
+        // 同步数据
+        syncData();
     }
 
     public int getOpenTicks() {
         return openTicks;
     }
+
+
+    private boolean isRunning = false;
+    public void syncData(){
+        init();
+
+    }
+
 }

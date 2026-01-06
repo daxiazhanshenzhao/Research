@@ -79,25 +79,27 @@ public class TechSlot extends AbstractButton {
 
     @Override
     protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-
+        // 判断是否应该显示focus效果
+        // clientFocus: 客户端focus（用于UI显示）
+        // tech.isFocused(): 服务端focus（追踪状态）
+        // 只要有一个focus状态为true，就显示focus效果
+        boolean shouldShowFocus = this.clientFocus || tech.isFocused();
 
         //1.渲染框
-        BlitContext window = (this.clientFocus || isHoveredOrFocused()) ? FOCUS_WINDOW : WINDOW;
+        BlitContext window = (shouldShowFocus || isHoveredOrFocused()) ? FOCUS_WINDOW : WINDOW;
         guiGraphics.blit(window.texture(), getX()-5, getY()-4, window.u(), window.v(), window.width(), window.height(), 512, 512);
 
         //2.渲染背景
-        BlitContext bg = (this.clientFocus || isHoveredOrFocused() || tech.getState().isBlackBg()) ? BG_BLACK : BG_WHITE;
+        BlitContext bg = (shouldShowFocus || isHoveredOrFocused() || tech.getState().isBlackBg()) ? BG_BLACK : BG_WHITE;
         guiGraphics.blit(bg.texture(),getX(),getY(),bg.u(),bg.v(),bg.width(),bg.height(),512,512);
 
         //3.渲染内部图标
         guiGraphics.blit(tech.getTech().getIconResource(),getX()+2,getY()+2,0,0,16,16,16,16);
+
         //4.渲染锁
         if (tech.getState().isLocked()){
             guiGraphics.blit(LOCK.texture(),getX()+5,getY()+3,LOCK.u(),LOCK.v(),LOCK.width(),LOCK.height(),512,512);
         }
-
-
-
     }
 
     @Override
@@ -115,23 +117,21 @@ public class TechSlot extends AbstractButton {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         // 先检查鼠标是否在槽位范围内
-        if (!this.clicked(mouseX, mouseY)) {
+        if (!this.clicked(mouseX, mouseY)
+                && (button != GLFW.GLFW_MOUSE_BUTTON_1)) {
             return false;
         }
-
-        if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
-
             int currentTick = screen.getOpenTicks();
             int ticksSinceLastClick = currentTick - lastClickTick;
 
-            if (ticksSinceLastClick <= DOUBLE_CLICK_TICKS && clientFocus) {
-                screen.clearFocus();
+            // 双击
+            if ((ticksSinceLastClick <= DOUBLE_CLICK_TICKS) && clientFocus) {
+                screen.clearFocus(this.tech.getTech());
             } else {
-                screen.focus(tech.getTech());
+                //单击
+                screen.focus(tech.getTech(), true);
+                lastClickTick = currentTick;
             }
-
-            lastClickTick = currentTick;
-        }
 
 
         return super.mouseClicked(mouseX, mouseY, button);
