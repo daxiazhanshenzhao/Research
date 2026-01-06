@@ -8,10 +8,7 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 import org.research.Research;
-import org.research.network.research.ClientOpenScreenPaket;
-import org.research.network.research.ClientboundSyncPlayerData;
-import org.research.network.research.OpenScreenPacket;
-import org.research.network.research.SendPacketPacket;
+import org.research.network.research.*;
 
 @Mod.EventBusSubscriber
 public class PacketInit {
@@ -58,6 +55,11 @@ public class PacketInit {
                 .decoder(SendPacketPacket::new)
                 .encoder(SendPacketPacket::toBytes)
                 .consumerMainThread(SendPacketPacket::handle)
+                .add();
+        net.messageBuilder(ClientSetFocusPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(ClientSetFocusPacket::new)
+                .encoder(ClientSetFocusPacket::toBytes)
+                .consumerMainThread(ClientSetFocusPacket::handle)
                 .add();
     }
 

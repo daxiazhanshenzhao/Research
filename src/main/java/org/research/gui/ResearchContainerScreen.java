@@ -9,6 +9,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 import org.research.api.client.ClientResearchData;
+import org.research.api.init.PacketInit;
 import org.research.api.tech.AbstractTech;
 import org.research.api.tech.SyncData;
 import org.research.api.tech.TechInstance;
@@ -19,15 +20,19 @@ import org.research.gui.component.TechSlot;
 import java.util.HashMap;
 import java.util.Map;
 import org.joml.Math;
+import org.research.network.research.ClientSetFocusPacket;
+
 //AdvancementsScreen
 //AdvancementWidget
 public abstract class ResearchContainerScreen extends Screen {
     //data
     private SyncData data;
 
-    @Deprecated
+
     private Map<ResourceLocation,TechSlot> slots = new HashMap<>();
 
+    //双重focus机制，最多能同时存在两个focus，，一个是服务端的追踪状态，一个是客户端的查看信息状态，点击lock slot的时候就会出现不同步的情况，实际服务端追踪状态就是原来的没有锁定的，但是信息查看是客户端focus的slot，
+    private TechSlot focusSlot;
     //render
 
     private float scrollOffs = 1f;  //缩放率，默认1f
@@ -428,7 +433,12 @@ public abstract class ResearchContainerScreen extends Screen {
     }
 
     public void focus(AbstractTech tech){
+        if (slots.containsKey(tech.getIdentifier())) {
+            PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier()));
 
+
+
+        }
     }
 
 }

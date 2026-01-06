@@ -142,6 +142,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     @Override
     public void focus(AbstractTech tech) {
         //遍历所有将focus设置为false
+        if (techMap.get(tech.getIdentifier()).getState().equals(TechState.LOCKED)) return;
+
         for (var instance: techMap.values()) {
             if (instance.isFocused()){
                 instance.setFocused(false);
