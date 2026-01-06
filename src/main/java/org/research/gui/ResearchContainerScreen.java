@@ -98,8 +98,20 @@ public abstract class ResearchContainerScreen extends Screen {
 
     /**
      * 将屏幕空间的鼠标坐标转换为变换后的世界空间坐标
-     * @param screenX 屏幕空间的X坐标
-     * @param screenY 屏幕空间的Y坐标
+     *
+     * 渲染时的正向变换：
+     * point' = T1 * T2 * S * T3 * point
+     * 其中：
+     *   T1 = translate(offsetX, offsetY, 0)
+     *   T2 = translate(centerX, centerY, 0)
+     *   S  = scale(scrollOffs, scrollOffs, 1)
+     *   T3 = translate(-centerX, -centerY, 0)
+     *
+     * 逆变换（从右到左应用逆矩阵）：
+     * point = T3^-1 * S^-1 * T2^-1 * T1^-1 * point'
+     *
+     * @param screenX 屏幕空间的X坐标（point'）
+     * @param screenY 屏幕空间的Y坐标（point'）
      */
     private void updateTransformedMouseCoords(double screenX, double screenY) {
         // 获取窗口信息
@@ -109,28 +121,31 @@ public abstract class ResearchContainerScreen extends Screen {
         int windowWidth = windowContext.width();
         int windowHeight = windowContext.height();
 
-        // 计算窗口中心点
+        // 计算窗口中心点（缩放中心）
         int centerX = windowX + windowWidth / 2;
         int centerY = windowY + windowHeight / 2;
 
-        // 逆向应用变换
-        // 步骤1: 撤销拖拽偏移
-        float tempMouseX = (float)screenX - offsetX;
-        float tempMouseY = (float)screenY - offsetY;
+        // 开始逆变换（从外到内，逆序撤销）
+        float tempMouseX = (float)screenX;
+        float tempMouseY = (float)screenY;
 
-        // 步骤2: 将坐标移到缩放中心
+        // T1^-1: 撤销 translate(offsetX, offsetY, 0)
+        tempMouseX -= offsetX;
+        tempMouseY -= offsetY;
+
+        // T2^-1: 撤销 translate(centerX, centerY, 0)
         tempMouseX -= centerX;
         tempMouseY -= centerY;
 
-        // 步骤3: 撤销缩放（除以缩放比例）
+        // S^-1: 撤销 scale(scrollOffs, scrollOffs, 1)
         tempMouseX /= scrollOffs;
         tempMouseY /= scrollOffs;
 
-        // 步骤4: 移回原位置
+        // T3^-1: 撤销 translate(-centerX, -centerY, 0)
         tempMouseX += centerX;
         tempMouseY += centerY;
 
-        // 保存转换后的坐标
+        // 保存转换后的坐标（这就是世界空间坐标）
         this.transformedMouseX = (int) tempMouseX;
         this.transformedMouseY = (int) tempMouseY;
     }

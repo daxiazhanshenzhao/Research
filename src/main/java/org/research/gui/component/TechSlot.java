@@ -21,8 +21,8 @@ public class TechSlot extends AbstractButton {
 
 //    AbstractButton
 
-    public TechSlot(int x, int y, TechInstance tech, ResearchContainerScreen screen) {
-        super(x,y,Width,Height, Component.empty());
+    public TechSlot(int u, int v, TechInstance tech, ResearchContainerScreen screen) {
+        super(u,v,Width,Height, Component.empty());
         this.tech = tech;
         this.screen = screen;
     }
