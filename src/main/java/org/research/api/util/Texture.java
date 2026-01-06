@@ -6,7 +6,7 @@ import org.research.Research;
 
 public class Texture {
 
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Research.MODID, "textures/gui/research.png");
+    public static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Research.MODID, "textures/gui/research_all.png");
 
     private static final ResourceLocation BACKGROUND = Research.asResource( "textures/gui/background.png");
     private static final ResourceLocation INSIDE = Research.asResource( "textures/gui/inside.png");

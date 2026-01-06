@@ -9,12 +9,18 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import org.research.api.tech.AbstractTech;
 import org.research.api.tech.TechInstance;
+import org.research.api.util.BlitContext;
+import org.research.api.util.Texture;
 import org.research.gui.ResearchContainerScreen;
 
 public class TechSlot extends AbstractButton {
 
     public static final int Width = 26;
     public static final int Height = 26;
+
+    private static final BlitContext LOCKED = BlitContext.of(Texture.TEXTURE,36,4,Width,Height);
+    private static final BlitContext AVAILABLE = BlitContext.of(Texture.TEXTURE,64,4,Width,Height);
+
 
     private TechInstance tech;
     private ResearchContainerScreen screen;
@@ -34,6 +40,8 @@ public class TechSlot extends AbstractButton {
 
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
+
+
 
     @Override
     public void onPress() {

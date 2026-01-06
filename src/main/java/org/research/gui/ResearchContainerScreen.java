@@ -56,12 +56,28 @@ public abstract class ResearchContainerScreen extends Screen {
         //科技槽位
         var insList = data.getCacheds();
         var vecList = data.getVecMap();
+
+        // 获取窗口信息，计算内容区域的中心点
+        var windowContext = getWindow();
+        var insideContext = getInside();
+        int windowX = (this.width - 256) / 2 + windowContext.u();
+        int windowY = (this.height - 256) / 2 + windowContext.v();
+        int centerX = windowX + windowContext.width() / 2;
+        int centerY = windowY + windowContext.height() / 2;
+
+        // 计算内部背景的起始位置
+        int insideX = centerX - insideContext.width() / 2;
+        int insideY = centerY - insideContext.height() / 2;
+
         for (TechInstance instance : insList.values()) {
             var vec = vecList.getOrDefault(instance.getIdentifier(), Vec2i.EMPTY);
 
-            var slot = new TechSlot(vec.x,vec.y,instance,this);
+            // 将槽位坐标相对于内部背景的左上角定位
+            var slot = new TechSlot(insideX + vec.x, insideY + vec.y, instance, this);
             slots.put(instance.getIdentifier(),slot);
-            addRenderableWidget(slot);
+            // 使用 addWidget 而不是 addRenderableWidget，避免自动渲染
+            // 槽位将在 renderInside() 中手动渲染
+            addWidget(slot);
         }
         super.init();
 
@@ -73,6 +89,9 @@ public abstract class ResearchContainerScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.guiLeft = (this.width-256)/2;
         this.guiTop = (this.height-256)/2;
+
+        // 更新槽位位置，确保它们与内部背景对齐
+        updateSlotPositions();
 
         // 1. 渲染固定的边框背景（不缩放）
         renderBg(guiGraphics, guiLeft, guiTop);
@@ -94,6 +113,33 @@ public abstract class ResearchContainerScreen extends Screen {
     private void handleCenter() {
 
 
+    }
+
+    /**
+     * 更新所有槽位的位置，确保它们与内部背景对齐
+     */
+    private void updateSlotPositions() {
+        // 获取窗口信息，计算内容区域的中心点
+        var windowContext = getWindow();
+        var insideContext = getInside();
+        int windowX = guiLeft + windowContext.u();
+        int windowY = guiTop + windowContext.v();
+        int centerX = windowX + windowContext.width() / 2;
+        int centerY = windowY + windowContext.height() / 2;
+
+        // 计算内部背景的起始位置
+        int insideX = centerX - insideContext.width() / 2;
+        int insideY = centerY - insideContext.height() / 2;
+
+        // 更新每个槽位的位置
+        var vecList = data.getVecMap();
+        for (var entry : slots.entrySet()) {
+            var vec = vecList.getOrDefault(entry.getKey(), Vec2i.EMPTY);
+            var slot = entry.getValue();
+            // 设置槽位相对于内部背景的位置
+            slot.setX(insideX + vec.x);
+            slot.setY(insideY + vec.y);
+        }
     }
 
     /**
@@ -368,8 +414,8 @@ public abstract class ResearchContainerScreen extends Screen {
         updateTransformedMouseCoords(mouseX, mouseY);
 
         // 在变换后的坐标系中渲染所有槽位，使用转换后的鼠标坐标
-        for (var renderable : renderables) {
-            renderable.render(context, transformedMouseX, transformedMouseY, partialTick);
+        for (var slot : slots.values()) {
+            slot.render(context, transformedMouseX, transformedMouseY, partialTick);
         }
 
 

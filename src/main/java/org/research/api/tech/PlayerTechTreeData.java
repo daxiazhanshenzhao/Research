@@ -68,7 +68,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     @Override
     public void initTechSlot() {
         addTech(TechInit.FIRST_TECH.get(),100,100);
-
+        addTech(TechInit.IRON_TECH.get(),474,292);
+        addTech(TechInit.APP_TECH.get(),0,0);
     }
 
     @Override
