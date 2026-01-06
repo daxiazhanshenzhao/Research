@@ -156,4 +156,14 @@ public class SyncData {
     public void syncToClient(){
         PacketInit.sendToPlayer(new ClientboundSyncPlayerData(this),player);
     }
+
+    public ResourceLocation getFocusTech(){
+        for (TechInstance tech : cacheds.values()) {
+            if (tech.isFocused()){
+                return tech.getIdentifier();
+            }
+        }
+        return TechInstance.EMPTY.getIdentifier();
+    }
+
 }

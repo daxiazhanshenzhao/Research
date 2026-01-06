@@ -62,7 +62,7 @@ public class TechBuilder {
     }
 
 
-    public TechBuilder builder(){
+    public TechBuilder build(){
         if (!validate()){
             throw new RuntimeException("You didn't define all config attributes!");
         }

@@ -8,6 +8,7 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import org.lwjgl.glfw.GLFW;
 import org.research.api.tech.AbstractTech;
 import org.research.api.tech.TechInstance;
 import org.research.api.tech.TechState;
@@ -20,14 +21,46 @@ public class TechSlot extends AbstractButton {
     public static final int Width = 26;
     public static final int Height = 26;
 
-    private static final BlitContext LOCKED = BlitContext.of(Texture.TEXTURE,36,4,Width,Height);
-    private static final BlitContext AVAILABLE = BlitContext.of(Texture.TEXTURE,5,4,Width,Height);
-    private static final BlitContext FOCUS = BlitContext.of(Texture.TEXTURE,68,3,Width+2,Height+2);
+    private static final BlitContext BG_WHITE = BlitContext.of(Texture.TEXTURE,0,0,20,20);
+    private static final BlitContext BG_BLACK = BlitContext.of(Texture.TEXTURE,21,0,20,20);
+
+    private static final BlitContext WINDOW = BlitContext.of(Texture.TEXTURE,41,0,28,28);
+    private static final BlitContext FOCUS_WINDOW = BlitContext.of(Texture.TEXTURE,70,0,28,28);
+
+    private static final BlitContext LOCK = BlitContext.of(Texture.TEXTURE,0,24,10,15);
 
     private TechInstance tech;
     private ResearchContainerScreen screen;
 
-    private boolean clientFocus = false;
+    private boolean clientFocus = false;  // 客户端focus状态（用于UI显示）
+
+    // 双击检测（基于游戏tick）
+    private int lastClickTick = 0;
+    private static final int DOUBLE_CLICK_TICKS = 10; // 10 ticks (500ms) 内的两次点击视为双击
+
+    /**
+     * 设置客户端focus状态
+     * @param clientFocus 是否为客户端focus
+     */
+    public void setClientFocus(boolean clientFocus) {
+        this.clientFocus = clientFocus;
+    }
+
+    /**
+     * 获取客户端focus状态
+     * @return 是否为客户端focus
+     */
+    public boolean isClientFocus() {
+        return this.clientFocus;
+    }
+
+    /**
+     * 获取科技实例
+     * @return 科技实例
+     */
+    public TechInstance getTechInstance() {
+        return this.tech;
+    }
 //    AbstractButton
 
     public TechSlot(int u, int v, TechInstance tech, ResearchContainerScreen screen) {
@@ -46,39 +79,25 @@ public class TechSlot extends AbstractButton {
 
     @Override
     protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        if (this.isHoveredOrFocused()) {
-            // FOCUS 状态：28x28，需要偏移-1使其居中
-            BlitContext background = FOCUS;
-            guiGraphics.blit(
-                background.texture(),
-                getX() - 1, getY() - 1,
-                background.u(), background.v(),
-                background.width(), background.height(),
-                512, 512
-            );
-        } else {
-            // AVAILABLE 状态：26x26
-            BlitContext background = AVAILABLE;
-            guiGraphics.blit(
-                background.texture(),
-                getX(), getY(),
-                background.u(), background.v(),
-                background.width(), background.height(),
-                512, 512
-            );
+
+
+        //1.渲染框
+        BlitContext window = (this.clientFocus || isHoveredOrFocused()) ? FOCUS_WINDOW : WINDOW;
+        guiGraphics.blit(window.texture(), getX()-5, getY()-4, window.u(), window.v(), window.width(), window.height(), 512, 512);
+
+        //2.渲染背景
+        BlitContext bg = (this.clientFocus || isHoveredOrFocused() || tech.getState().isBlackBg()) ? BG_BLACK : BG_WHITE;
+        guiGraphics.blit(bg.texture(),getX(),getY(),bg.u(),bg.v(),bg.width(),bg.height(),512,512);
+
+        //3.渲染内部图标
+        guiGraphics.blit(tech.getTech().getIconResource(),getX()+2,getY()+2,0,0,16,16,16,16);
+        //4.渲染锁
+        if (tech.getState().isLocked()){
+            guiGraphics.blit(LOCK.texture(),getX()+5,getY()+3,LOCK.u(),LOCK.v(),LOCK.width(),LOCK.height(),512,512);
         }
 
-        guiGraphics.blit(tech.getTech().getIconResource(),getX()+5,getY()+5,0,0,16,16,16,16);
-        if (tech.getState().equals(TechState.LOCKED)){
-            BlitContext background = LOCKED;
-            guiGraphics.blit(
-                background.texture(),
-                getX(), getY(),
-                background.u(), background.v(),
-                background.width(), background.height(),
-                512, 512
-            );
-        }
+
+
     }
 
     @Override
@@ -91,11 +110,28 @@ public class TechSlot extends AbstractButton {
 
     }
 
+
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // 先检查鼠标是否在槽位范围内
+        if (!this.clicked(mouseX, mouseY)) {
+            return false;
+        }
 
-            screen.focus(tech.getTech());
+        if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
 
+            int currentTick = screen.getOpenTicks();
+            int ticksSinceLastClick = currentTick - lastClickTick;
+
+            if (ticksSinceLastClick <= DOUBLE_CLICK_TICKS && clientFocus) {
+                screen.clearFocus();
+            } else {
+                screen.focus(tech.getTech());
+            }
+
+            lastClickTick = currentTick;
+        }
 
 
         return super.mouseClicked(mouseX, mouseY, button);

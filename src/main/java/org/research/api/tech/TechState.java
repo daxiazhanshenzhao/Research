@@ -36,4 +36,11 @@ public enum TechState {
     public int getValue() {
         return value;
     }
+
+    public boolean isBlackBg(){
+        return this.equals(LOCKED);
+    }
+    public boolean isLocked(){
+        return this.equals(LOCKED);
+    }
 }

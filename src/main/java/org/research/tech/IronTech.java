@@ -17,6 +17,7 @@ public class IronTech extends AbstractTech {
         return TechBuilder.Builder()
                 .addStage(3)
                 .addParent(TechInit.FIRST_TECH.getId())
-                .addRecipe(RecipeWrapper.Craft(ResourceLocation.withDefaultNamespace("iron_ingot_from_nuggets")));
+                .addRecipe(RecipeWrapper.Craft(ResourceLocation.withDefaultNamespace("iron_ingot_from_nuggets")))
+                .build();
     }
 }

@@ -18,7 +18,8 @@ public class RedStoneTech extends AbstractTech {
         return TechBuilder.Builder()
                 .addStage(1)
                 .addParent(TechInit.FIRST_TECH.getId())
-                .addRecipe(RecipeWrapper.Craft(ResourceLocation.withDefaultNamespace("redstone_block")));
+                .addRecipe(RecipeWrapper.Craft(ResourceLocation.withDefaultNamespace("redstone_block")))
+                .build();
     }
 
 

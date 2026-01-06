@@ -79,6 +79,11 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
         var techInstance = new TechInstance(tech,player);
         var vec2i = new Vec2i(x,y);
 
+        //对第一个tech设置特殊状态
+        if (techInstance.equals(getFirstTech())){
+            techInstance.setTechState(TechState.COMPLETED);
+        }
+
         techMap.put(tech.getIdentifier(),techInstance);
         vecMap.put(tech.getIdentifier(),vec2i);
 

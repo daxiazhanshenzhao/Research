@@ -8,11 +8,13 @@ import net.minecraft.client.gui.screens.advancements.AdvancementWidget;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
+import org.research.Research;
 import org.research.api.client.ClientResearchData;
 import org.research.api.init.PacketInit;
 import org.research.api.tech.AbstractTech;
 import org.research.api.tech.SyncData;
 import org.research.api.tech.TechInstance;
+import org.research.api.tech.TechState;
 import org.research.api.tech.graphTree.Vec2i;
 import org.research.api.util.BlitContext;
 import org.research.gui.component.TechSlot;
@@ -45,6 +47,10 @@ public abstract class ResearchContainerScreen extends Screen {
     // 缓存转换后的鼠标坐标，用于所有鼠标事件
     private int transformedMouseX = 0;
     private int transformedMouseY = 0;
+
+    private int openTicks = 0;
+
+
 
     protected ResearchContainerScreen(SyncData data) {
         super(Component.empty());
@@ -104,6 +110,7 @@ public abstract class ResearchContainerScreen extends Screen {
         // 2. 渲染需要缩放的内容（内部背景和槽位）
         renderInside(guiGraphics, mouseX, mouseY, partialTick);
 
+
         // 注意：不调用 super.render()，避免重复渲染槽位
         // super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
@@ -111,8 +118,13 @@ public abstract class ResearchContainerScreen extends Screen {
     @Override
     public void tick() {
 
-//        Research.LOGGER.info(String.valueOf(this.scrollOffs));
-        handleCenter();
+        Research.LOGGER.info("Server Focus: {}", data.getFocusTech().getPath());
+        if (focusSlot != null) {
+            Research.LOGGER.info("Client Focus: {}", focusSlot.getTechInstance().getIdentifier().getPath());
+        }
+
+        openTicks++;
+
     }
 
     private void handleCenter() {
@@ -298,7 +310,8 @@ public abstract class ResearchContainerScreen extends Screen {
             }
         }
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        // 点击空白处不做任何处理，保持当前focus状态
+        return false;
     }
 
     @Override
@@ -432,13 +445,60 @@ public abstract class ResearchContainerScreen extends Screen {
 
     }
 
+    /**
+     * 获取当前客户端focus的槽位
+     * @return 当前focus的槽位，如果没有则返回null
+     */
+    public TechSlot getFocusSlot() {
+        return this.focusSlot;
+    }
+
+    /**
+     * 清除客户端focus状态（通过双击槽位触发）
+     */
+    public void clearFocus() {
+        if (focusSlot != null) {
+            focusSlot.setClientFocus(false);
+            focusSlot = null;
+        }
+    }
+
+    /**
+     * 设置focus的科技
+     * 双重focus机制：
+     * 1. 客户端focus：用于UI显示和查看信息，任何科技都可以设置
+     * 2. 服务端focus：用于追踪状态，只有非LOCKED的科技可以设置
+     *
+     * @param tech 要focus的科技
+     */
     public void focus(AbstractTech tech){
-        if (slots.containsKey(tech.getIdentifier())) {
+        if (!slots.containsKey(tech.getIdentifier())) {
+            return;
+        }
+
+        TechSlot slot = slots.get(tech.getIdentifier());
+
+        // 1. 更新客户端focus（用于UI显示和查看信息）
+        // 取消之前的客户端focus
+        if (focusSlot != null) {
+            focusSlot.setClientFocus(false);
+        }
+
+        // 设置新的客户端focus
+        focusSlot = slot;
+        slot.setClientFocus(true);
+
+        // 2. 判断是否需要更新服务端focus（追踪状态）
+        // 只有当科技不是LOCKED状态时，才发送到服务端设置追踪状态
+        TechInstance techInstance = slot.getTechInstance();
+        if (techInstance != null && techInstance.getState() != TechState.LOCKED) {
+            // 发送网络包到服务端，设置服务端的追踪状态
             PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier()));
-
-
 
         }
     }
 
+    public int getOpenTicks() {
+        return openTicks;
+    }
 }
