@@ -1,17 +1,17 @@
 package org.research.gui.component;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
-import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import org.lwjgl.glfw.GLFW;
-import org.research.api.tech.AbstractTech;
+import org.research.api.recipe.IRecipe;
 import org.research.api.tech.TechInstance;
-import org.research.api.tech.TechState;
 import org.research.api.util.BlitContext;
 import org.research.api.util.Texture;
 import org.research.gui.ResearchContainerScreen;
@@ -28,6 +28,12 @@ public class TechSlot extends AbstractButton {
     private static final BlitContext FOCUS_WINDOW = BlitContext.of(Texture.TEXTURE,70,0,28,28);
 
     private static final BlitContext LOCK = BlitContext.of(Texture.TEXTURE,0,24,10,15);
+
+    // Minecraft用于标记缺失材质的ResourceLocation
+    private static final ResourceLocation MISSING_TEXTURE_LOCATION = ResourceLocation.withDefaultNamespace("missingno");
+
+    // 默认图标（当图标资源不存在时使用）
+    private static final ResourceLocation DEFAULT_ICON = ResourceLocation.withDefaultNamespace("textures/item/barrier.png");
 
     private TechInstance tech;
     private ResearchContainerScreen screen;
@@ -79,12 +85,8 @@ public class TechSlot extends AbstractButton {
 
     @Override
     protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // 判断是否应该显示focus效果
-        // clientFocus: 客户端focus（用于UI显示）
-        // tech.isFocused(): 服务端focus（追踪状态）
-        // 只要有一个focus状态为true，就显示focus效果
-        boolean shouldShowFocus = this.clientFocus || tech.isFocused();
 
+        boolean shouldShowFocus = this.clientFocus || tech.isFocused();
         //1.渲染框
         BlitContext window = (shouldShowFocus || isHoveredOrFocused()) ? FOCUS_WINDOW : WINDOW;
         guiGraphics.blit(window.texture(), getX()-5, getY()-4, window.u(), window.v(), window.width(), window.height(), 512, 512);
@@ -94,7 +96,29 @@ public class TechSlot extends AbstractButton {
         guiGraphics.blit(bg.texture(),getX(),getY(),bg.u(),bg.v(),bg.width(),bg.height(),512,512);
 
         //3.渲染内部图标
-        guiGraphics.blit(tech.getTech().getIconResource(),getX()+2,getY()+2,0,0,16,16,16,16);
+        if (tech != null && tech.getTech() != null) {
+            ResourceLocation iconResource = tech.getTech().getIconResource();
+            var minecraft = Minecraft.getInstance();
+            AbstractTexture texture = minecraft.getTextureManager().getTexture(iconResource);
+
+            if (texture != MissingTextureAtlasSprite.getTexture()) {
+                guiGraphics.blit(iconResource, getX(), getY(), 0, 0, 16, 16, 16, 16);
+            } else {
+                // 使用默认图标
+                if (tech.getRecipe() != null && minecraft.getConnection() != null) {
+                    var recipe = IRecipe.getClientRecipe(tech.getRecipe(), minecraft);
+                    if (recipe != null) {
+                        var item = recipe.getResultItem(minecraft.getConnection().registryAccess());
+                        if (!item.isEmpty()) {
+                            guiGraphics.renderItem(item, getX()+2, getY()+2);
+                        }
+                    }
+
+
+                }
+            }
+        }
+
 
         //4.渲染锁
         if (tech.getState().isLocked()){
@@ -135,5 +159,13 @@ public class TechSlot extends AbstractButton {
 
 
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /**
+     * 更新槽位的科技实例数据（避免重新创建槽位）
+     */
+    public void updateInstance(TechInstance newInstance) {
+        this.tech = newInstance;
+        // 如果有其他需要更新的状态，在这里更新
     }
 }

@@ -5,10 +5,12 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.MinecraftForge;
 import org.research.Research;
 import org.research.api.event.custom.ChangeTechStageEvent;
 import org.research.api.init.TechInit;
+import org.research.api.recipe.IRecipe;
 import org.research.api.recipe.RecipeWrapper;
 
 import javax.annotation.Nullable;
@@ -169,7 +171,16 @@ public class TechInstance implements Comparable<TechInstance> {
 
 
 
-
+    public ItemStack getRecipeOutput() {
+        var recipeWrapperData = getRecipe();
+        var registryAccess = serverPlayer.server.registryAccess();
+        var recipe = IRecipe.getRecipeFromWrapper(recipeWrapperData, serverPlayer.server);
+        if (recipe != null) {
+            return recipe.getResultItem(registryAccess);
+        }else {
+            return ItemStack.EMPTY;
+        }
+    }
 
 
 

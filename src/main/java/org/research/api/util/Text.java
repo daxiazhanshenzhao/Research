@@ -9,7 +9,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.research.Research;
 import org.research.api.init.TechInit;
-import org.research.tech.IronTech;
 
 @Mod.EventBusSubscriber
 public class Text {
@@ -22,11 +21,11 @@ public class Text {
                     Research.LOGGER.info(techTree.serializeNBT().toString());
                 }
                 if (item.equals(Items.IRON_INGOT)) {
-                    techTree.addTech(TechInit.IRON_TECH.get(),50,10);
+
                 }
 
                 if (item.equals(Items.GOLD_INGOT)) {
-                    techTree.removeTech(TechInit.IRON_TECH.get());
+
                 }
 
             });

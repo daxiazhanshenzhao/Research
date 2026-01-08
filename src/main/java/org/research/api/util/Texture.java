@@ -15,7 +15,7 @@ public class Texture {
     public static final BlitContext background = new BlitContext(BACKGROUND,0,0,256,256);
 
     public static final BlitContext window = new BlitContext(BACKGROUND,15,28,226,187);
-    public static final BlitContext inside = new BlitContext(INSIDE,0,0,474,292);
+    public static final BlitContext inside = new BlitContext(INSIDE,0,0,512,512);
 
 
 

@@ -1,4 +1,4 @@
-package org.research.tech;
+package org.research.tech.stage4;
 
 import net.minecraft.resources.ResourceLocation;
 import org.research.Research;
@@ -7,20 +7,17 @@ import org.research.api.recipe.RecipeWrapper;
 import org.research.api.tech.AbstractTech;
 import org.research.api.tech.TechBuilder;
 
-public class RedStoneTech extends AbstractTech {
-
-    public RedStoneTech() {
-        super(Research.asResource("red_tone_tech"));
+public class ITech extends AbstractTech {
+    public ITech() {
+        super(Research.asResource("i_tech"));
     }
 
     @Override
     public TechBuilder getTechBuilder() {
         return TechBuilder.Builder()
-                .addStage(1)
-                .addParent(TechInit.FIRST_TECH.getId())
-                .addRecipe(RecipeWrapper.Craft(ResourceLocation.withDefaultNamespace("redstone_block")))
+                .addStage(4)
+                .addParent(TechInit.E_TECH.getId())
+                .addRecipe(RecipeWrapper.Craft(ResourceLocation.withDefaultNamespace("bucket")))
                 .build();
     }
-
-
 }

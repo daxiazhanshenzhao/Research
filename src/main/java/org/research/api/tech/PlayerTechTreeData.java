@@ -54,7 +54,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
     @Override
     public TechInstance getFirstTech() {
-        TechInstance techinstance = new TechInstance(TechInit.FIRST_TECH.get(),player);
+        TechInstance techinstance = new TechInstance(TechInit.A_TECH.get(),player);
         techinstance.setTechState(TechState.COMPLETED);
         return techinstance;
     }
@@ -67,9 +67,27 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
     @Override
     public void initTechSlot() {
-        addTech(TechInit.FIRST_TECH.get(),100,100);
-        addTech(TechInit.IRON_TECH.get(),474,292);
-        addTech(TechInit.APP_TECH.get(),0,0);
+        //stage1
+        addTech(TechInit.A_TECH.get(),239,471)
+                //stage2
+                .addTech(TechInit.B_TECH.get(),239,428)
+                //stage3
+                .addTech(TechInit.C_TECH.get(),239,387)
+                .addTech(TechInit.D_TECH.get(),277,387)
+                .addTech(TechInit.E_TECH.get(),199,387)
+                .addTech(TechInit.F_TECH.get(),316,387)
+                //stage4
+                .addTech(TechInit.G_TECH.get(),277,353)
+                .addTech(TechInit.H_TECH.get(),239,353)
+                .addTech(TechInit.I_TECH.get(),199,353)
+                .addTech(TechInit.J_TECH.get(),156,353)
+                //stage5
+                .addTech(TechInit.K_TECH.get(),156,319)
+                .addTech(TechInit.L_TECH.get(),199,319)
+                .addTech(TechInit.M_TECH.get(),239,319)
+                //stage6
+                .addTech(TechInit.N_TECH.get(),219,279)
+                .addTech(TechInit.O_TECH.get(),262,279);
     }
 
     @Override
@@ -113,22 +131,14 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     @Override
     public void tryComplete(ItemStack itemStack) {
         for (TechInstance tech : techMap.values()) {
-
-            var recipeWrapperData = tech.getRecipe();
-            var registryAccess = player.server.registryAccess();
-            var recipe = IRecipe.getRecipeFromWrapper(recipeWrapperData, player.server);
-            if (recipe != null) {
-                ItemStack recipeOutput = recipe.getResultItem(registryAccess);
-                if (ItemStack.isSameItemSameTags(recipeOutput, itemStack)) {
+            var output = tech.getRecipeOutput();
+                if (!output.isEmpty() && ItemStack.isSameItemSameTags(output, itemStack)) {
 
                     tech.setTechState(TechState.COMPLETED);
 
                     focus(tech.getTech(),true);
                     tryNext(tech.getTech());
-
-
                 }
-            }
 
         }
     }
