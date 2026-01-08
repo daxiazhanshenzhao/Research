@@ -166,4 +166,27 @@ public class SyncData {
         return TechInstance.EMPTY.getIdentifier();
     }
 
+    /**
+     * 计算数据的哈希值，用于检测数据是否发生变化
+     * @return 数据的哈希值
+     */
+    public int getDataHash() {
+        int hash = 17;
+        hash = 31 * hash + playerId;
+        hash = 31 * hash + stage;
+
+        // 包含 cacheds 的哈希
+        for (var entry : cacheds.entrySet()) {
+            hash = 31 * hash + entry.getKey().hashCode();
+            TechInstance instance = entry.getValue();
+            hash = 31 * hash + instance.getStateValue();
+            hash = 31 * hash + (instance.isFocused() ? 1 : 0);
+        }
+
+        // 包含 vecMap 的哈希（通常不变，但为了完整性还是包含）
+        hash = 31 * hash + vecMap.size();
+
+        return hash;
+    }
+
 }

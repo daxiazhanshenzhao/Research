@@ -3,7 +3,9 @@ package org.research.gui.component;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.core.RegistryAccess;
@@ -15,6 +17,9 @@ import org.research.api.tech.TechInstance;
 import org.research.api.util.BlitContext;
 import org.research.api.util.Texture;
 import org.research.gui.ResearchContainerScreen;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 public class TechSlot extends AbstractButton {
 
@@ -75,12 +80,22 @@ public class TechSlot extends AbstractButton {
         this.screen = screen;
     }
 
+
+
+
+
+
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-
-
-
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+
+        // 只在鼠标悬停时渲染tooltip
+        if (this.isHoveredOrFocused()) {
+            guiGraphics.renderComponentTooltip(Minecraft.getInstance().font,
+                    List.of(Component.literal("ID: " + tech.getIdentifier().toString()),
+                            Component.literal("Stage: " + tech.getState().name())),
+                    mouseX, mouseY);
+        }
     }
 
     @Override
@@ -166,6 +181,8 @@ public class TechSlot extends AbstractButton {
      */
     public void updateInstance(TechInstance newInstance) {
         this.tech = newInstance;
-        // 如果有其他需要更新的状态，在这里更新
+
     }
+
+
 }

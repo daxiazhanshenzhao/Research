@@ -15,9 +15,6 @@ public class ClientboundSyncPlayerData {
     public ClientboundSyncPlayerData(SyncData syncData) {
         this.syncData = syncData;
     }
-    public ClientboundSyncPlayerData() {
-        // 空构造函数用于网络序列化
-    }
 
     public ClientboundSyncPlayerData(FriendlyByteBuf buf){
         syncData = SyncData.SYNCED_SPELL_DATA.read(buf);
@@ -29,10 +26,14 @@ public class ClientboundSyncPlayerData {
 
     public boolean handle(Supplier<NetworkEvent.Context> supplier){
         NetworkEvent.Context context = supplier.get();
+        context.setPacketHandled(true);
 
         context.enqueueWork(() -> {
-            ClientResearchData.playerSyncedDataLookup.put(syncData.getPlayerId(), syncData);
+            if (syncData != null) {
+                ClientResearchData.playerSyncedDataLookup.put(syncData.getPlayerId(), syncData);
+            }
         });
+
         return true;
     }
 

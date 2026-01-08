@@ -1,6 +1,7 @@
 package org.research.api.util;
 
 
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -9,6 +10,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.research.Research;
 import org.research.api.init.TechInit;
+import org.research.api.tech.PlayerTechTreeData;
 
 @Mod.EventBusSubscriber
 public class Text {
@@ -21,6 +23,8 @@ public class Text {
                     Research.LOGGER.info(techTree.serializeNBT().toString());
                 }
                 if (item.equals(Items.IRON_INGOT)) {
+                    Research.LOGGER.info(techTree.getCacheds().toString());
+                    Research.LOGGER.info(techTree.getSyncData().getCacheds().toString());
 
                 }
 

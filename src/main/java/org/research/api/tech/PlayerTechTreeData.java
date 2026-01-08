@@ -43,12 +43,13 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
     }
 
+    // 用于反序列化的构造函数，不调用 initTechSlot()
     public PlayerTechTreeData(Map<ResourceLocation,TechInstance> techMap,Map<ResourceLocation,Vec2i> vecMap,int stage) {
-        this(null);
+        this.player = null;
         this.techMap = techMap;
+        this.cacheds = new HashMap<>(techMap); // 复制 techMap 到 cacheds
         this.vecMap = vecMap;
         this.stage = stage;
-
 
     }
 
@@ -136,6 +137,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
                     tech.setTechState(TechState.COMPLETED);
 
+                    syncToClient();
                     focus(tech.getTech(),true);
                     tryNext(tech.getTech());
                 }
@@ -197,7 +199,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
             return;
         }
         
-        // 2. 只有一个子节点：当前科技保持完成状态，子节点变为可用
+        // 2. 只有一个子节点：当前科技保持完成状态，子节点变为可用（需检查所有前置是否完成）
         if (children.size() == 1) {
             // 当前科技应该已经是 COMPLETED 状态（由 tryComplete 设置）
             // 确保当前科技是 COMPLETED 状态
@@ -205,33 +207,65 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                 instance.setTechState(TechState.COMPLETED);
             }
             
-            // 子节点变为可用状态
+            // 子节点变为可用状态（仅当所有前置科技都已完成时）
             ResourceLocation childId = children.get(0);
             TechInstance childInstance = techMap.get(childId);
             if (childInstance != null && childInstance.getState() == TechState.LOCKED) {
-                childInstance.setTechState(TechState.AVAILABLE);
-
-                syncStage(childInstance.getTech());
+                // 检查子节点的所有前置科技是否都已完成
+                if (areAllParentsCompleted(childInstance)) {
+                    childInstance.setTechState(TechState.AVAILABLE);
+                    syncStage(childInstance.getTech());
+                }
             }
         }
         
-        // 3. 有多个子节点：当前科技进入等待选择状态，所有子节点变为可用
+        // 3. 有多个子节点：当前科技进入等待选择状态，所有子节点变为可用（需检查各自的前置）
         if (children.size() > 1) {
             // 当前科技进入等待选择状态
             instance.setTechState(TechState.WAITING);
             
-            // 所有子节点变为可用状态
+            // 所有子节点变为可用状态（仅当它们各自的所有前置科技都已完成时）
             for (ResourceLocation childId : children) {
                 TechInstance childInstance = techMap.get(childId);
                 if (childInstance != null && childInstance.getState() == TechState.LOCKED) {
-                    childInstance.setTechState(TechState.AVAILABLE);
-
-                    syncStage(childInstance.getTech());
+                    // 检查子节点的所有前置科技是否都已完成
+                    if (areAllParentsCompleted(childInstance)) {
+                        childInstance.setTechState(TechState.AVAILABLE);
+                        syncStage(childInstance.getTech());
+                    }
                 }
             }
         }
 
 
+    }
+
+    /**
+     * 检查一个科技的所有前置科技是否都已完成
+     *
+     * @param techInstance 要检查的科技实例
+     * @return 如果所有前置科技都已完成则返回true，否则返回false
+     */
+    private boolean areAllParentsCompleted(TechInstance techInstance) {
+        List<ResourceLocation> parents = techInstance.getParents();
+
+        // 如果没有前置科技，返回true
+        if (parents.isEmpty()) {
+            return true;
+        }
+
+        // 检查每个前置科技的状态
+        for (ResourceLocation parentId : parents) {
+            TechInstance parentInstance = techMap.get(parentId);
+
+            // 如果前置科技不存在或未完成，返回false
+            if (parentInstance == null || parentInstance.getState() != TechState.COMPLETED) {
+                return false;
+            }
+        }
+
+        // 所有前置科技都已完成
+        return true;
     }
 
     //
@@ -405,7 +439,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
     public static final Codec<PlayerTechTreeData> CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-                Codec.unboundedMap(ResourceLocation.CODEC, TechInstance.CODEC).fieldOf(CACHEDs).forGetter(PlayerTechTreeData::getCacheds),
+                Codec.unboundedMap(ResourceLocation.CODEC, TechInstance.CODEC).fieldOf(CACHEDs).forGetter(PlayerTechTreeData::getTechMap),
                 Codec.unboundedMap(ResourceLocation.CODEC, Vec2i.CODEC).fieldOf(VEC).forGetter(PlayerTechTreeData::getVecMap),
                 Codec.INT.fieldOf(STAGE).forGetter(PlayerTechTreeData::getStage)
         ).apply(instance,PlayerTechTreeData::new));
@@ -422,16 +456,19 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
         return vecMap;
     }
 
+    public Map<ResourceLocation, TechInstance> getTechMap() {
+        return techMap;
+    }
+
     //将数据解析为nbt
     @Override
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
-            var dataResult = PlayerTechTreeData.CODEC.encodeStart(NbtOps.INSTANCE, this);
+        var dataResult = PlayerTechTreeData.CODEC.encodeStart(NbtOps.INSTANCE, this);
 
-            dataResult.result().ifPresent(nbt->{
-                tag.put(STAGE, nbt);
-                getSyncData().saveNbt(tag);
-            });
+        dataResult.result().ifPresent(nbt->{
+            tag.put(TREE_DATA, nbt);
+        });
 
         return tag;
     }
@@ -441,14 +478,32 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     @Override
     public void deserializeNBT(CompoundTag compoundTag) {
         Tag dataResult = compoundTag.get(TREE_DATA);
-        var a = PlayerTechTreeData.CODEC.parse(NbtOps.INSTANCE,dataResult);
-        a.result().ifPresent(playerTechTreeData ->{
-                    this.cacheds = playerTechTreeData.getCacheds();
-                    this.vecMap = playerTechTreeData.getVecMap();
-                }
-        );
+        if (dataResult != null) {
+            var a = PlayerTechTreeData.CODEC.parse(NbtOps.INSTANCE, dataResult);
+            a.result().ifPresent(playerTechTreeData -> {
+                Map<ResourceLocation, TechInstance> loadedTechMap = playerTechTreeData.getTechMap();
 
-        getSyncData().loadNbt(compoundTag);
+                // 如果加载的数据不为空，则使用加载的数据
+                if (loadedTechMap != null && !loadedTechMap.isEmpty()) {
+                    this.techMap = loadedTechMap;
+                    this.cacheds = new HashMap<>(loadedTechMap);
+                    this.vecMap = playerTechTreeData.getVecMap();
+                    this.stage = playerTechTreeData.getStage();
+
+                    // 重新关联 player 到所有 TechInstance
+                    if (this.player != null) {
+                        for (TechInstance instance : this.techMap.values()) {
+                            instance.setServerPlayer(this.player);
+                        }
+                        for (TechInstance instance : this.cacheds.values()) {
+                            instance.setServerPlayer(this.player);
+                        }
+                    }
+                }
+                // 如果加载的数据为空，保持构造函数中 initTechSlot() 初始化的数据
+            });
+        }
+        // 如果 compoundTag 中没有 TREE_DATA，保持构造函数中 initTechSlot() 初始化的数据
     }
 
     public int getStage() {

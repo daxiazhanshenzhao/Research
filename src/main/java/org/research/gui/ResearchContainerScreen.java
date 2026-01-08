@@ -64,19 +64,20 @@ public abstract class ResearchContainerScreen extends Screen {
 
     private int openTicks = 0;
 
+    // 用于检测数据变化的哈希值
+    private int lastDataHash = 0;
+
 
 
     protected ResearchContainerScreen(SyncData data) {
         super(Component.empty());
         this.data = data;
+        this.lastDataHash = data.getDataHash(); // 初始化哈希值
         init();
     }
 
     @Override
     protected void init() {
-        //同步
-        ClientResearchData.syncFromServer();
-        this.data = ClientResearchData.getSyncData();
 
         // 获取窗口信息，计算内容区域的中心点
         var windowContext = getWindow();
@@ -96,6 +97,7 @@ public abstract class ResearchContainerScreen extends Screen {
         var insList = data.getCacheds();
         var vecList = data.getVecMap();
 
+
         // 计算内部背景的起始位置
         int insideX = centerX - insideContext.width() / 2;
         int insideY = centerY - insideContext.height() / 2;
@@ -110,6 +112,7 @@ public abstract class ResearchContainerScreen extends Screen {
             // 槽位将在 renderInside() 中手动渲染
             addWidget(slot);
         }
+
         super.init();
 
     }
@@ -137,14 +140,79 @@ public abstract class ResearchContainerScreen extends Screen {
 
     @Override
     public void tick() {
-
-//        Research.LOGGER.info("Server Focus: {}", data.getFocusTech().getPath());
-//        if (focusSlot != null) {
-//            Research.LOGGER.info("Client Focus: {}", focusSlot.getTechInstance().getIdentifier().getPath());
-//        }
-
         openTicks++;
 
+        // 自动检测 SyncData 变化
+        checkAndUpdateData();
+    }
+
+    /**
+     * 检查客户端缓存的 SyncData 是否发生变化，如果变化则自动更新
+     */
+    private void checkAndUpdateData() {
+        // 从客户端缓存获取最新数据
+        SyncData latestData = ClientResearchData.getSyncData();
+
+        // 如果是空数据，跳过（但在第一次tick时会发生，这是正常的）
+        if (latestData.getPlayerId() == -999) {
+            // 只在前几帧打印警告，避免刷屏
+            if (openTicks <= 5) {
+            }
+            return;
+        }
+
+        // 计算最新数据的哈希值
+        int newHash = latestData.getDataHash();
+
+        // 如果哈希值不同，说明数据发生了变化
+        if (newHash != lastDataHash) {
+
+            // 更新数据
+            this.data = latestData;
+            this.lastDataHash = newHash;
+
+            // 自动更新槽位数据
+            updateSlotsData();
+        }
+    }
+
+    /**
+     * 更新所有槽位的数据（不重新创建槽位）
+     */
+    private void updateSlotsData() {
+        var insList = data.getCacheds();
+
+        // 更新现有槽位的数据
+        for (var entry : slots.entrySet()) {
+            ResourceLocation id = entry.getKey();
+            TechSlot slot = entry.getValue();
+
+            // 如果该槽位对应的实例还存在，更新其数据
+            if (insList.containsKey(id)) {
+                slot.updateInstance(insList.get(id));
+            }
+        }
+
+        // 如果有新的科技实例，添加它们
+        for (var entry : insList.entrySet()) {
+            if (!slots.containsKey(entry.getKey())) {
+                var windowContext = getWindow();
+                var insideContext = getInside();
+                int windowX = (this.width - 256) / 2 + windowContext.u();
+                int windowY = (this.height - 256) / 2 + windowContext.v();
+                int centerX = windowX + windowContext.width() / 2;
+                int centerY = windowY + windowContext.height() / 2;
+                int insideX = centerX - insideContext.width() / 2;
+                int insideY = centerY - insideContext.height() / 2;
+
+                var vec = data.getVecMap().getOrDefault(entry.getKey(), Vec2i.EMPTY);
+                var slot = new TechSlot(insideX + vec.x, insideY + vec.y, entry.getValue(), this);
+                slots.put(entry.getKey(), slot);
+                addWidget(slot);
+
+                System.out.println("[ResearchContainerScreen] Added new slot: " + entry.getKey());
+            }
+        }
     }
 
     private void handleCenter() {
@@ -423,37 +491,29 @@ public abstract class ResearchContainerScreen extends Screen {
         TechInstance techInstance = slot.getTechInstance();
 
         if (isFocus) {
-            // 设置focus状态
 
-            // 1. 更新客户端focus（用于UI显示和查看信息）
-            // 任何状态的科技都可以设置客户端focus
             if (focusSlot != null && focusSlot != slot) {
-                // 取消之前的客户端focus
+
                 focusSlot.setClientFocus(false);
             }
 
-            // 设置新的客户端focus
             focusSlot = slot;
             slot.setClientFocus(true);
 
-            // 2. 判断是否需要更新服务端focus（追踪状态）
-            // 只有当科技不是LOCKED状态时，才发送到服务端设置追踪状态
+
             if (techInstance != null && techInstance.getState() != TechState.LOCKED) {
-                // 发送网络包到服务端，设置服务端的追踪状态
+
                 PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier(), true));
             }
-            // 如果是LOCKED状态，则不发送到服务端，只保持客户端focus用于显示信息
+
 
         } else {
-            // 取消focus状态
 
-            // 1. 取消客户端focus
             if (focusSlot == slot) {
                 focusSlot.setClientFocus(false);
                 focusSlot = null;
             }
 
-            // 2. 发送到服务端取消追踪状态（无论是否LOCKED都发送，确保服务端状态正确）
             PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier(), false));
         }
 
@@ -475,41 +535,20 @@ public abstract class ResearchContainerScreen extends Screen {
         isRunning = true;
 
         try {
-            // 从服务器同步数据
-            ClientResearchData.syncFromServer();
-            this.data = ClientResearchData.getSyncData();
+            // 从客户端缓存中获取最新数据（该数据由网络包更新）
+            SyncData latestData = ClientResearchData.getSyncData();
 
-            // 只更新现有槽位的数据，不重新创建
-            var insList = data.getCacheds();
-            for (var entry : slots.entrySet()) {
-                ResourceLocation id = entry.getKey();
-                TechSlot slot = entry.getValue();
-
-                // 如果该槽位对应的实例还存在，更新其数据
-                if (insList.containsKey(id)) {
-                    slot.updateInstance(insList.get(id));
-                }
+            // 如果获取到的是空数据，保持当前数据不变
+            if (latestData.getPlayerId() == -999) {
+                return;
             }
 
-            // 如果有新的科技实例，添加它们
-            // （通常在初始化后不应该有新的，但为了安全起见保留此逻辑）
-            for (var entry : insList.entrySet()) {
-                if (!slots.containsKey(entry.getKey())) {
-                    var windowContext = getWindow();
-                    var insideContext = getInside();
-                    int windowX = (this.width - 256) / 2 + windowContext.u();
-                    int windowY = (this.height - 256) / 2 + windowContext.v();
-                    int centerX = windowX + windowContext.width() / 2;
-                    int centerY = windowY + windowContext.height() / 2;
-                    int insideX = centerX - insideContext.width() / 2;
-                    int insideY = centerY - insideContext.height() / 2;
+            // 更新数据和哈希值
+            this.data = latestData;
+            this.lastDataHash = latestData.getDataHash();
 
-                    var vec = data.getVecMap().getOrDefault(entry.getKey(), Vec2i.EMPTY);
-                    var slot = new TechSlot(insideX + vec.x, insideY + vec.y, entry.getValue(), this);
-                    slots.put(entry.getKey(), slot);
-                    addWidget(slot);
-                }
-            }
+            // 更新槽位数据
+            updateSlotsData();
         } finally {
             isRunning = false;
         }

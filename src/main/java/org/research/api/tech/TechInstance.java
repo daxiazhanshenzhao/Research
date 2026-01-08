@@ -85,6 +85,10 @@ public class TechInstance implements Comparable<TechInstance> {
         return serverPlayer;
     }
 
+    public void setServerPlayer(ServerPlayer serverPlayer) {
+        this.serverPlayer = serverPlayer;
+    }
+
     /**
      * 获取当前科技实例的所有父节点（前置科技）。
      * <p>

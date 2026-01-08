@@ -25,6 +25,7 @@ public class ClientOpenScreenPaket {
 
     public boolean handle(Supplier<NetworkEvent.Context> supplier){
         NetworkEvent.Context context = supplier.get();
+        context.setPacketHandled(true);
 
         context.enqueueWork(() -> {
             if (context.getSender() != null) {
@@ -35,11 +36,8 @@ public class ClientOpenScreenPaket {
                     PacketInit.sendToPlayer(new OpenScreenPacket(syncData), player);
                 });
             }
-
-
-
-
         });
+
         return true;
     }
 

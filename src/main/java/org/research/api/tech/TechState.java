@@ -37,6 +37,7 @@ public enum TechState {
         return value;
     }
 
+
     public boolean isBlackBg(){
         return this.equals(LOCKED);
     }

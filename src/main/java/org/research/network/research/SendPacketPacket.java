@@ -18,24 +18,29 @@ public class SendPacketPacket {
     }
 
     public SendPacketPacket(FriendlyByteBuf buf){
+        // 空包，不需要读取数据
     }
 
     public void toBytes(FriendlyByteBuf buf){
+        // 空包，不需要写入数据
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> supplier){
         NetworkEvent.Context context = supplier.get();
+        context.setPacketHandled(true);
 
         context.enqueueWork(() -> {
             if (context.getSender() != null) {
                 var player = context.getSender();
-                PacketInit.sendToPlayer(new ClientboundSyncPlayerData(), player);
+
+                // 获取玩家的科技树数据并发送给客户端
+                ResearchApi.getTechTreeData(player).ifPresent(techTree -> {
+                    var syncData = techTree.getSyncData();
+                    PacketInit.sendToPlayer(new ClientboundSyncPlayerData(syncData), player);
+                });
             }
-
-
-
-
         });
+
         return true;
     }
 }

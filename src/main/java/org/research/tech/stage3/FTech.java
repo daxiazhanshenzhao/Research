@@ -15,7 +15,7 @@ public class FTech extends AbstractTech {
     public TechBuilder getTechBuilder() {
         return TechBuilder.Builder()
                 .addStage(3)
-                .addRecipe(RecipeWrapper.Craft(ResourceLocation.withDefaultNamespace("wooden_pickaxe")))
+                .addRecipe(RecipeWrapper.Craft(ResourceLocation.withDefaultNamespace("tnt")))
                 .build();
     }
 }
