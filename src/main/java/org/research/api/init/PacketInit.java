@@ -61,6 +61,11 @@ public class PacketInit {
                 .encoder(ClientSetFocusPacket::toBytes)
                 .consumerMainThread(ClientSetFocusPacket::handle)
                 .add();
+        net.messageBuilder(ClientClearFocusPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(ClientClearFocusPacket::new)
+                .encoder(ClientClearFocusPacket::toBytes)
+                .consumerMainThread(ClientClearFocusPacket::handle)
+                .add();
     }
 
 

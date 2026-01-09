@@ -84,7 +84,7 @@ public class TechInit {
         return tech;
     }
 
-//    public static RegistryObject<AbstractTech> FIRST_TECH = registerTech(EMPTY);
+    public static RegistryObject<AbstractTech> EMPTY_TECH = registerTech(EMPTY);
 //    public static RegistryObject<AbstractTech> APP_TECH = registerTech(new RedStoneTech());
 //    public static RegistryObject<AbstractTech> IRON_TECH = registerTech(new IronTech());
 

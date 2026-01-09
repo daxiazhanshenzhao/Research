@@ -43,7 +43,8 @@ public class SyncData {
 
     public SyncData(PlayerTechTreeData treeData) {
         this(treeData.getPlayer());
-        this.cacheds = treeData.getCacheds();
+        // 直接使用 techMap 创建缓存的副本，避免引用同一个对象
+        this.cacheds = new HashMap<>(treeData.getTechMap());
         this.vecMap = treeData.getVecMap();
         this.stage = treeData.getStage();
     }
@@ -116,9 +117,9 @@ public class SyncData {
     public void loadNbt(CompoundTag compoundTag){
         Tag dataResult = compoundTag.get(TREE_DATA);
         var a = CODEC.parse(NbtOps.INSTANCE,dataResult);
-        a.result().ifPresent(playerTechTreeData ->{
-                    this.cacheds = playerTechTreeData.getCacheds();
-                    this.vecMap = playerTechTreeData.getVecMap();
+        a.result().ifPresent(syncData ->{
+                    this.cacheds = syncData.cacheds;
+                    this.vecMap = syncData.getVecMap();
                 }
         );
     }

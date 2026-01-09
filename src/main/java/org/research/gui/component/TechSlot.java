@@ -34,36 +34,19 @@ public class TechSlot extends AbstractButton {
 
     private static final BlitContext LOCK = BlitContext.of(Texture.TEXTURE,0,24,10,15);
 
-    // Minecraft用于标记缺失材质的ResourceLocation
-    private static final ResourceLocation MISSING_TEXTURE_LOCATION = ResourceLocation.withDefaultNamespace("missingno");
-
-    // 默认图标（当图标资源不存在时使用）
-    private static final ResourceLocation DEFAULT_ICON = ResourceLocation.withDefaultNamespace("textures/item/barrier.png");
+    public static final TechSlot EMPTY = new TechSlot(0,0,TechInstance.EMPTY,null);
 
     private TechInstance tech;
     private ResearchContainerScreen screen;
 
-    private boolean clientFocus = false;  // 客户端focus状态（用于UI显示）
+//    private boolean clientFocus = false;  // 客户端focus状态（用于UI显示）
 
     // 双击检测（基于游戏tick）
     private int lastClickTick = 0;
     private static final int DOUBLE_CLICK_TICKS = 10; // 10 ticks (500ms) 内的两次点击视为双击
 
-    /**
-     * 设置客户端focus状态
-     * @param clientFocus 是否为客户端focus
-     */
-    public void setClientFocus(boolean clientFocus) {
-        this.clientFocus = clientFocus;
-    }
 
-    /**
-     * 获取客户端focus状态
-     * @return 是否为客户端focus
-     */
-    public boolean isClientFocus() {
-        return this.clientFocus;
-    }
+
 
     /**
      * 获取科技实例
@@ -87,6 +70,8 @@ public class TechSlot extends AbstractButton {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        if (tech.isEmpty()) return;
+
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         // 只在鼠标悬停时渲染tooltip
@@ -101,7 +86,10 @@ public class TechSlot extends AbstractButton {
     @Override
     protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 
-        boolean shouldShowFocus = this.clientFocus || tech.isFocused();
+
+
+        boolean shouldShowFocus =tech.isFocused()
+                || screen.getFocusSlot().tech.equals(this.tech);
         //1.渲染框
         BlitContext window = (shouldShowFocus || isHoveredOrFocused()) ? FOCUS_WINDOW : WINDOW;
         guiGraphics.blit(window.texture(), getX()-5, getY()-4, window.u(), window.v(), window.width(), window.height(), 512, 512);
@@ -110,7 +98,7 @@ public class TechSlot extends AbstractButton {
         BlitContext bg = (shouldShowFocus || isHoveredOrFocused() || tech.getState().isBlackBg()) ? BG_BLACK : BG_WHITE;
         guiGraphics.blit(bg.texture(),getX(),getY(),bg.u(),bg.v(),bg.width(),bg.height(),512,512);
 
-        //3.渲染内部图标
+        //3.渲染内部图标（在背景之后，锁之前）
         if (tech != null && tech.getTech() != null) {
             ResourceLocation iconResource = tech.getTech().getIconResource();
             var minecraft = Minecraft.getInstance();
@@ -119,25 +107,27 @@ public class TechSlot extends AbstractButton {
             if (texture != MissingTextureAtlasSprite.getTexture()) {
                 guiGraphics.blit(iconResource, getX(), getY(), 0, 0, 16, 16, 16, 16);
             } else {
-                // 使用默认图标
+                // 使用默认图标（物品渲染）
                 if (tech.getRecipe() != null && minecraft.getConnection() != null) {
                     var recipe = IRecipe.getClientRecipe(tech.getRecipe(), minecraft);
                     if (recipe != null) {
                         var item = recipe.getResultItem(minecraft.getConnection().registryAccess());
                         if (!item.isEmpty()) {
                             guiGraphics.renderItem(item, getX()+2, getY()+2);
+
                         }
                     }
-
-
                 }
             }
         }
 
-
-        //4.渲染锁
+        //4.渲染锁（最上层）
         if (tech.getState().isLocked()){
+            // 将锁渲染提升到更高层级
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(0, 0, 1000);
             guiGraphics.blit(LOCK.texture(),getX()+5,getY()+3,LOCK.u(),LOCK.v(),LOCK.width(),LOCK.height(),512,512);
+            guiGraphics.pose().popPose();
         }
     }
 
@@ -155,25 +145,33 @@ public class TechSlot extends AbstractButton {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // 先检查鼠标是否在槽位范围内
-        if (!this.clicked(mouseX, mouseY)
-                && (button != GLFW.GLFW_MOUSE_BUTTON_1)) {
+        // 先检查鼠标是否在槽位范围内和是否是左键
+        if (!this.clicked(mouseX, mouseY) || button != GLFW.GLFW_MOUSE_BUTTON_1) {
             return false;
         }
-            int currentTick = screen.getOpenTicks();
-            int ticksSinceLastClick = currentTick - lastClickTick;
 
-            // 双击
-            if ((ticksSinceLastClick <= DOUBLE_CLICK_TICKS) && clientFocus) {
-                screen.clearFocus(this.tech.getTech());
+        // 双击检测
+        int currentTick = screen.getOpenTicks();
+        int ticksSinceLastClick = currentTick - lastClickTick;
+
+        if (ticksSinceLastClick <= DOUBLE_CLICK_TICKS) {
+            // 双击 - 清除焦点
+            screen.clearFocus(this.tech.getIdentifier());
+        } else {
+            // 单击 - 设置焦点
+            if (!tech.getState().isLocked()) {
+                // 已解锁科技 - 同步到服务端
+                screen.focus(tech.getIdentifier(), true);
             } else {
-                //单击
-                screen.focus(tech.getTech(), true);
-                lastClickTick = currentTick;
+                // 锁定科技 - 仅客户端显示
+                screen.focus(tech.getIdentifier(), false);
             }
 
+            lastClickTick = currentTick;
+        }
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        // 返回 true 表示事件已处理，不再继续传播
+        return true;
     }
 
     /**

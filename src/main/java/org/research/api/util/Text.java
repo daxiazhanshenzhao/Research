@@ -23,9 +23,7 @@ public class Text {
                     Research.LOGGER.info(techTree.serializeNBT().toString());
                 }
                 if (item.equals(Items.IRON_INGOT)) {
-                    Research.LOGGER.info(techTree.getCacheds().toString());
-                    Research.LOGGER.info(techTree.getSyncData().getCacheds().toString());
-
+//                        techTree.resetAllTech();
                 }
 
                 if (item.equals(Items.GOLD_INGOT)) {

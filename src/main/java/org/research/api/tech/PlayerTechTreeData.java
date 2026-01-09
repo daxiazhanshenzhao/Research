@@ -6,11 +6,11 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import org.research.api.init.TechInit;
-import org.research.api.recipe.IRecipe;
 import org.research.api.tech.capability.ITechTreeCapability;
 import org.research.api.tech.graphTree.Vec2i;
 
@@ -24,16 +24,22 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     private ServerPlayer player;
 
     /**
-     * only server
+     * only server - 服务端科技数据
      */
     private Map<ResourceLocation,TechInstance> techMap = new HashMap<>();
-    /**
-     * client or server
-     */
-    private Map<ResourceLocation,TechInstance> cacheds = new HashMap<>();
-    private Map<ResourceLocation,Vec2i> vecMap = new HashMap<>();
 
-    private int stage = 0;
+    private Map<ResourceLocation,Vec2i> vecMap = new HashMap<>();
+    private int stage = 1;
+
+    /**
+     * 上次同步时的 techMap 哈希值，用于判断数据是否变化
+     */
+    private int lastTechMapHash = 0;
+
+    /**
+     * 缓存的 SyncData 对象，避免每次 tick 都创建新对象
+     */
+    private SyncData cachedSyncData = null;
 
     public PlayerTechTreeData(ServerPlayer player) {
 //        super(TechInit.getAllTech().size());
@@ -47,7 +53,6 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     public PlayerTechTreeData(Map<ResourceLocation,TechInstance> techMap,Map<ResourceLocation,Vec2i> vecMap,int stage) {
         this.player = null;
         this.techMap = techMap;
-        this.cacheds = new HashMap<>(techMap); // 复制 techMap 到 cacheds
         this.vecMap = vecMap;
         this.stage = stage;
 
@@ -56,15 +61,11 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     @Override
     public TechInstance getFirstTech() {
         TechInstance techinstance = new TechInstance(TechInit.A_TECH.get(),player);
-        techinstance.setTechState(TechState.COMPLETED);
+        techinstance.setTechState(TechState.AVAILABLE);
         return techinstance;
     }
 
 
-
-    /**
-     * 重写nextNode方法，添加状态管理
-     */
 
     @Override
     public void initTechSlot() {
@@ -88,7 +89,10 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                 .addTech(TechInit.M_TECH.get(),239,319)
                 //stage6
                 .addTech(TechInit.N_TECH.get(),219,279)
-                .addTech(TechInit.O_TECH.get(),262,279);
+                .addTech(TechInit.O_TECH.get(),262,279)
+
+                //empty_tech
+                .addTech(TechInit.EMPTY_TECH.get(),0,0);
     }
 
     @Override
@@ -100,7 +104,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
         //对第一个tech设置特殊状态
         if (techInstance.equals(getFirstTech())){
-            techInstance.setTechState(TechState.COMPLETED);
+            techInstance.setTechState(TechState.AVAILABLE);
         }
 
         techMap.put(tech.getIdentifier(),techInstance);
@@ -133,15 +137,40 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     public void tryComplete(ItemStack itemStack) {
         for (TechInstance tech : techMap.values()) {
             var output = tech.getRecipeOutput();
-                if (!output.isEmpty() && ItemStack.isSameItemSameTags(output, itemStack)) {
+            // 只有当科技处于 AVAILABLE 状态时才能尝试完成
+            if (!output.isEmpty()
+                    && ItemStack.isSameItemSameTags(output, itemStack)
+                    && tech.getState() == TechState.AVAILABLE) {
 
-                    tech.setTechState(TechState.COMPLETED);
-
-                    syncToClient();
-                    focus(tech.getTech(),true);
-                    tryNext(tech.getTech());
+                // 检查所有前置科技是否都已完成
+                var parents = getParents(tech.getTech());
+                boolean allParentsCompleted = true;
+                for (var parentId : parents) {
+                    TechInstance parentInstance = techMap.get(parentId);
+                    if (parentInstance == null || parentInstance.getState() != TechState.COMPLETED) {
+                        allParentsCompleted = false;
+                        break;
+                    }
                 }
 
+                // 如果所有前置科技都已完成，则完成当前科技
+                if (allParentsCompleted) {
+                    // 根据子节点数量决定科技的最终状态
+                    List<ResourceLocation> children = getChildren(tech.getTech());
+
+                    if (children.size() > 1) {
+                        // 有多个子节点：设置为 WAITING 状态，等待玩家选择
+                        tech.setTechState(TechState.WAITING);
+                    } else {
+                        // 只有一个或没有子节点：设置为 COMPLETED 状态
+                        tech.setTechState(TechState.COMPLETED);
+                    }
+
+                    syncStage(tech.getTech());
+                    focus(tech.getIdentifier());
+                    tryNext(tech.getTech());
+                }
+            }
         }
     }
 
@@ -157,32 +186,45 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
 
     @Override
-    public void focus(AbstractTech tech, boolean isFocus) {
+    public void focus(ResourceLocation techId) {
         // 检查科技是否存在
-        if (!techMap.containsKey(tech.getIdentifier())) {
+        if (!techMap.containsKey(techId)) {
             return;
         }
 
-        TechInstance instance = techMap.get(tech.getIdentifier());
+        TechInstance instance = techMap.get(techId);
 
         // 如果要设置focus，但科技是LOCKED状态，则不允许设置服务端focus
-        if (isFocus && instance.getState().equals(TechState.LOCKED)) {
+        if (instance.getState().equals(TechState.LOCKED)) {
             return;
         }
 
-        // 取消所有其他科技的focus状态
+
+        clearFocus();
+        if (!instance.getState().equals(TechState.WAITING)) {
+            clearWaiting();
+        }
+
+        instance.setFocused(true);
+        player.sendSystemMessage(Component.literal("Focused on tech: " + techId.toString()));
+    }
+
+    private void clearWaiting() {
+        for (var techInstance : techMap.values()) {
+            if (techInstance.getState().equals(TechState.WAITING)) {
+                techInstance.setTechState(TechState.COMPLETED);
+            }
+        }
+    }
+
+    @Override
+    public void clearFocus() {
         for (var techInstance : techMap.values()) {
             if (techInstance.isFocused()) {
                 techInstance.setFocused(false);
             }
         }
-
-        // 设置当前科技的focus状态
-        instance.setFocused(isFocus);
     }
-
-
-
 
     @Override
     public void tryNext(AbstractTech tech) {
@@ -199,14 +241,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
             return;
         }
         
-        // 2. 只有一个子节点：当前科技保持完成状态，子节点变为可用（需检查所有前置是否完成）
+        // 2. 只有一个子节点：子节点变为可用（需检查所有前置是否完成）
         if (children.size() == 1) {
-            // 当前科技应该已经是 COMPLETED 状态（由 tryComplete 设置）
-            // 确保当前科技是 COMPLETED 状态
-            if (instance.getState() != TechState.COMPLETED) {
-                instance.setTechState(TechState.COMPLETED);
-            }
-            
             // 子节点变为可用状态（仅当所有前置科技都已完成时）
             ResourceLocation childId = children.get(0);
             TechInstance childInstance = techMap.get(childId);
@@ -219,11 +255,9 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
             }
         }
         
-        // 3. 有多个子节点：当前科技进入等待选择状态，所有子节点变为可用（需检查各自的前置）
+        // 3. 有多个子节点：所有子节点变为可用（需检查各自的前置）
+        // 注意：当前科技的状态已在 tryComplete 中设置为 WAITING
         if (children.size() > 1) {
-            // 当前科技进入等待选择状态
-            instance.setTechState(TechState.WAITING);
-            
             // 所有子节点变为可用状态（仅当它们各自的所有前置科技都已完成时）
             for (ResourceLocation childId : children) {
                 TechInstance childInstance = techMap.get(childId);
@@ -236,7 +270,6 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                 }
             }
         }
-
 
     }
 
@@ -259,7 +292,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
             TechInstance parentInstance = techMap.get(parentId);
 
             // 如果前置科技不存在或未完成，返回false
-            if (parentInstance == null || parentInstance.getState() != TechState.COMPLETED) {
+            if (parentInstance == null || (parentInstance.getState().isLocked())) {
                 return false;
             }
         }
@@ -274,18 +307,58 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
         autoSync();
     }
 
+
+
     /**
-     * 同步同一阶段的科技，1.没有父节点，2，锁定状态
-     * @param tech
+     * 重置所有科技数据，从头开始
+     * 清空所有科技进度，重新初始化科技树
+     */
+    @Override
+    public void resetAllTech() {
+        // 清空所有数据（techMap 清空后就不需要再调用 clearFocus 了）
+        techMap.clear();
+        vecMap.clear();
+        stage = 1;
+        lastTechMapHash = 0;
+        cachedSyncData = null;
+
+        // 重新初始化科技树
+        initTechSlot();
+
+        // 同步到客户端
+        syncToClient();
+
+        // 发送消息通知玩家
+        if (player != null) {
+            player.sendSystemMessage(Component.literal("所有科技数据已重置！"));
+        }
+    }
+
+    /**
+     * 同步同一阶段的科技，1.没有父节点，2.锁定状态
+     * 当完成一个科技时，解锁同一阶段中没有前置科技的其他科技
+     * @param tech 刚完成的科技
      */
     private void syncStage(AbstractTech tech){
+        // 获取当前科技所在阶段的所有科技ID
+        List<ResourceLocation> sameStageTechs = getStages(tech);
 
-        //如果父节点没有科技就升级
-        if (getParents(tech).isEmpty() && getStages(tech).size() >1) {
-            for (TechInstance instance : techMap.values()) {
-                if (getStages(tech).equals(instance.getIdentifier()) && instance.getState().equals(TechState.LOCKED)){
-                    instance.setTechState(TechState.AVAILABLE);
-                }
+        // 如果同一阶段只有一个科技（自己），则不需要同步
+        if (sameStageTechs.size() <= 1) {
+            return;
+        }
+
+        // 遍历同一阶段的所有科技
+        for (ResourceLocation techId : sameStageTechs) {
+            TechInstance instance = techMap.get(techId);
+
+            // 检查：1. 科技存在  2. 处于锁定状态  3. 没有前置科技
+            if (instance != null
+                && instance.getState() == TechState.LOCKED
+                && getParents(instance.getTech()).isEmpty()) {
+
+                // 解锁这个孤立的科技
+                instance.setTechState(TechState.AVAILABLE);
             }
         }
     }
@@ -325,9 +398,6 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
     @Override
     public Pair<List<ResourceLocation>, List<ResourceLocation>> getDependencies(AbstractTech tech) {
-        if (tech == null) {
-            throw new IllegalArgumentException("科技不能为null");
-        }
 
         List<ResourceLocation> parents = getParents(tech);
         List<ResourceLocation> children = getChildren(tech);
@@ -337,10 +407,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
     @Override
     public List<ResourceLocation> getChildren(AbstractTech tech) {
-        if (tech == null) {
-            throw new IllegalArgumentException("科技不能为null");
-        }
-        
+
         ResourceLocation targetId = tech.getIdentifier();
         List<ResourceLocation> children = new ArrayList<>();
         
@@ -373,53 +440,39 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     }
 
     /**
-     * 比较差异来快速同步
-     * 1.比较AbstractTech
-     * 2.比较
+     * 自动同步数据到客户端
+     * 通过计算 techMap 的哈希值来判断是否需要同步，避免不必要的网络传输和对象创建
      */
     private void autoSync(){
-        boolean needsSync = false;
-        
-        //将tech同步到缓存
-        for (TechInstance tech : techMap.values()) {
-            var id = tech.getIdentifier();
+        // 计算当前 techMap 的哈希值
+        int currentHash = calculateTechMapHash();
 
-            //如果使用了add方法
-            if (!cacheds.containsKey(id)) {
-                cacheds.put(id, tech);
-                needsSync = true;
-            }
-            //如果改变了其他的
-            else if (cacheds.containsKey(id)) {
-                var cached = cacheds.get(id);
-                int result = tech.compareTo(cached);
-                if (result != 0){
-                    cacheds.put(id, tech);
-                    needsSync = true;
-                }
-            }
-        }
-
-        // 找出需要从缓存中移除的key（在cacheds中存在但在techMap中不存在）
-        List<ResourceLocation> keysToRemove = new ArrayList<>();
-        for (ResourceLocation cachedKey : cacheds.keySet()) {
-            if (!techMap.containsKey(cachedKey)) {
-                keysToRemove.add(cachedKey);
-            }
-        }
-        
-        // 批量移除
-        if (!keysToRemove.isEmpty()) {
-            for (ResourceLocation key : keysToRemove) {
-                cacheds.remove(key);
-            }
-            needsSync = true;
-        }
-        
-        // 如果需要同步，则同步到客户端
-        if (needsSync) {
+        // 如果哈希值发生变化，说明 techMap 已更新，需要同步到客户端
+        if (currentHash != lastTechMapHash) {
+            // 标记缓存失效，需要重新创建 SyncData
+            cachedSyncData = null;
             syncToClient();
+            lastTechMapHash = currentHash;
         }
+    }
+
+    /**
+     * 计算 techMap 的哈希值，用于检测数据变化
+     * 包含所有 TechInstance 的状态信息
+     */
+    private int calculateTechMapHash() {
+        int hash = 17;
+        hash = 31 * hash + stage;
+
+        // 遍历 techMap，计算每个 TechInstance 的哈希值
+        for (var entry : techMap.entrySet()) {
+            hash = 31 * hash + entry.getKey().hashCode();
+            TechInstance instance = entry.getValue();
+            hash = 31 * hash + instance.getStateValue();
+            hash = 31 * hash + (instance.isFocused() ? 1 : 0);
+        }
+
+        return hash;
     }
     @Override
     public void syncToClient() {
@@ -427,13 +480,16 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     }
 
 
-
-
-
-
-
+    /**
+     * 获取同步数据对象
+     * 使用缓存机制，只在数据变化时才创建新对象
+     */
     public SyncData getSyncData() {
-        return new SyncData(this);
+        // 如果缓存失效，重新创建 SyncData
+        if (cachedSyncData == null) {
+            cachedSyncData = new SyncData(this);
+        }
+        return cachedSyncData;
     }
 
 
@@ -447,15 +503,11 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
 
     @Override
-    public Map<ResourceLocation, TechInstance> getCacheds() {
-        return cacheds;
-    }
-
-    @Override
     public Map<ResourceLocation, Vec2i> getVecMap() {
         return vecMap;
     }
 
+    @Override
     public Map<ResourceLocation, TechInstance> getTechMap() {
         return techMap;
     }
@@ -485,17 +537,14 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
                 // 如果加载的数据不为空，则使用加载的数据
                 if (loadedTechMap != null && !loadedTechMap.isEmpty()) {
-                    this.techMap = loadedTechMap;
-                    this.cacheds = new HashMap<>(loadedTechMap);
-                    this.vecMap = playerTechTreeData.getVecMap();
+                    // 创建新的可变 HashMap，避免不可变集合导致的 UnsupportedOperationException
+                    this.techMap = new HashMap<>(loadedTechMap);
+                    this.vecMap = new HashMap<>(playerTechTreeData.getVecMap());
                     this.stage = playerTechTreeData.getStage();
 
                     // 重新关联 player 到所有 TechInstance
                     if (this.player != null) {
                         for (TechInstance instance : this.techMap.values()) {
-                            instance.setServerPlayer(this.player);
-                        }
-                        for (TechInstance instance : this.cacheds.values()) {
                             instance.setServerPlayer(this.player);
                         }
                     }

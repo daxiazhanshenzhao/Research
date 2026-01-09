@@ -57,7 +57,6 @@ public interface ITechTreeCapability<T> {
 
     void syncToClient();
 
-    Map<ResourceLocation, TechInstance> getCacheds();
     Map<ResourceLocation, Vec2i> getVecMap();
 
     CompoundTag serializeNBT();
@@ -69,13 +68,11 @@ public interface ITechTreeCapability<T> {
      */
     void tryComplete(ItemStack itemStack);
 
+    Map<ResourceLocation, TechInstance> getTechMap();
 
-    /**
-     * 设置聚焦或者不聚焦科技
-     * @param tech 科技
-     * @param isFocus 是否聚焦
-     */
-    void focus(AbstractTech tech,boolean isFocus);
+    void focus(ResourceLocation techId);
+
+    void clearFocus();
 
     ResourceLocation getFocus();
 
@@ -134,4 +131,6 @@ public interface ITechTreeCapability<T> {
      */
     List<ResourceLocation> getStages(int stage);
     SyncData getSyncData();
+
+    void resetAllTech();
 }

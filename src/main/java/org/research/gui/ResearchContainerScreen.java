@@ -7,7 +7,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
-import org.research.Research;
 import org.research.api.client.ClientResearchData;
 import org.research.api.init.PacketInit;
 import org.research.api.tech.*;
@@ -19,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.joml.Math;
+import org.research.network.research.ClientClearFocusPacket;
 import org.research.network.research.ClientSetFocusPacket;
 
 //AdvancementsScreen
@@ -52,7 +52,7 @@ public abstract class ResearchContainerScreen extends Screen {
      * 4. 双击取消：
      *    - 双击任何已focus的槽位会同时取消客户端和服务端的focus状态
      */
-    private TechSlot focusSlot;
+    private TechSlot focusSlot = TechSlot.EMPTY;
     //render
 
     private MouseHandleBgData mouseHandleBgData = new MouseHandleBgData();
@@ -146,35 +146,7 @@ public abstract class ResearchContainerScreen extends Screen {
         checkAndUpdateData();
     }
 
-    /**
-     * 检查客户端缓存的 SyncData 是否发生变化，如果变化则自动更新
-     */
-    private void checkAndUpdateData() {
-        // 从客户端缓存获取最新数据
-        SyncData latestData = ClientResearchData.getSyncData();
 
-        // 如果是空数据，跳过（但在第一次tick时会发生，这是正常的）
-        if (latestData.getPlayerId() == -999) {
-            // 只在前几帧打印警告，避免刷屏
-            if (openTicks <= 5) {
-            }
-            return;
-        }
-
-        // 计算最新数据的哈希值
-        int newHash = latestData.getDataHash();
-
-        // 如果哈希值不同，说明数据发生了变化
-        if (newHash != lastDataHash) {
-
-            // 更新数据
-            this.data = latestData;
-            this.lastDataHash = newHash;
-
-            // 自动更新槽位数据
-            updateSlotsData();
-        }
-    }
 
     /**
      * 更新所有槽位的数据（不重新创建槽位）
@@ -275,7 +247,7 @@ public abstract class ResearchContainerScreen extends Screen {
             dragTotal += Math.abs(dragX);
             dragTotal += Math.abs(dragY);
 
-            if (dragTotal >= 2){
+            if (dragTotal >= 1){
                 isDragging = true;
 
                 // 使用MouseHandleBgData处理拖拽
@@ -302,27 +274,29 @@ public abstract class ResearchContainerScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // 更新转换后的鼠标坐标
-        mouseHandleBgData.updateTransformedMouseCoords(mouseX, mouseY);
-
-        // 如果正在拖拽，不处理点击
+        // 如果正在拖拽，忽略点击事件
         if (isDragging) {
             return false;
         }
 
-        // 将事件传递给子组件，使用转换后的坐标
+        // 更新转换后的鼠标坐标
+        mouseHandleBgData.updateTransformedMouseCoords(mouseX, mouseY);
+
+        // 获取转换后的鼠标坐标
         int transformedMouseX = mouseHandleBgData.getTransformedMouseX();
         int transformedMouseY = mouseHandleBgData.getTransformedMouseY();
 
-        // 使用副本遍历，防止ConcurrentModificationException
-        // 因为点击可能触发focus()->syncData()->init()，会修改children集合
+        // 只对鼠标坐标范围内的子组件触发点击事件
         for (var child : List.copyOf(children())) {
-            if (child.mouseClicked(transformedMouseX, transformedMouseY, button)) {
-                return true;
+            // 检查鼠标是否在子组件范围内
+            if (child.isMouseOver(transformedMouseX, transformedMouseY)) {
+                // 只有鼠标真正在组件范围内时才触发点击
+                if (child.mouseClicked(transformedMouseX, transformedMouseY, button)) {
+                    return true;  // 事件已被处理，立即返回
+                }
             }
         }
 
-        // 点击空白处不做任何处理，保持当前focus状态
         return false;
     }
 
@@ -455,70 +429,37 @@ public abstract class ResearchContainerScreen extends Screen {
         return this.focusSlot;
     }
 
+    public void setFocusSlot(TechSlot focusSlot) {
+        this.focusSlot = focusSlot;
+    }
+
+    public Map<ResourceLocation, TechSlot> getSlots() {
+        return slots;
+    }
+
     /**
      * 清除双端focus状态（通过双击槽位触发）
      * 同时清除客户端focus和服务端focus
      */
-    public void clearFocus(AbstractTech tech) {
-        // 清除客户端focus
-        if (focusSlot != null) {
-            focusSlot.setClientFocus(false);
-            focusSlot = null;
+    public void clearFocus(ResourceLocation techId) {
+        if (this.focusSlot != TechSlot.EMPTY) {
+
         }
-
-        // 发送网络包到服务端，清除服务端focus
-        PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier(), false));
-
-        // 同步数据
-        syncData();
+        this.focusSlot = TechSlot.EMPTY;
+        PacketInit.sendToServer(new ClientClearFocusPacket());
     }
 
-    /**
-     * 设置focus的科技
-     * 双重focus机制：
-     * 1. 客户端focus：用于UI显示和查看信息，任何科技都可以设置
-     * 2. 服务端focus：用于追踪状态，只有非LOCKED的科技可以设置
-     *
-     * @param tech 要focus的科技
-     * @param isFocus 是否设置为focus状态
-     */
-    public void focus(AbstractTech tech, boolean isFocus) {
-        if (!slots.containsKey(tech.getIdentifier())) {
+
+    public void focus(ResourceLocation techId, boolean toServer) {
+        if (!slots.containsKey(techId)) {
             return;
         }
 
-        TechSlot slot = slots.get(tech.getIdentifier());
-        TechInstance techInstance = slot.getTechInstance();
-
-        if (isFocus) {
-
-            if (focusSlot != null && focusSlot != slot) {
-
-                focusSlot.setClientFocus(false);
-            }
-
-            focusSlot = slot;
-            slot.setClientFocus(true);
-
-
-            if (techInstance != null && techInstance.getState() != TechState.LOCKED) {
-
-                PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier(), true));
-            }
-
-
-        } else {
-
-            if (focusSlot == slot) {
-                focusSlot.setClientFocus(false);
-                focusSlot = null;
-            }
-
-            PacketInit.sendToServer(new ClientSetFocusPacket(tech.getIdentifier(), false));
+        TechSlot slot = slots.get(techId);
+        this.focusSlot = slot;
+        if (toServer){
+            PacketInit.sendToServer(new ClientSetFocusPacket(techId));
         }
-
-        // 同步数据
-        syncData();
     }
 
     public int getOpenTicks() {
@@ -527,31 +468,55 @@ public abstract class ResearchContainerScreen extends Screen {
 
 
     private boolean isRunning = false;
+    /**
+     * 强制同步数据（忽略哈希值检查）
+     */
     public void syncData(){
         // 防止递归调用
         if (isRunning) {
             return;
         }
         isRunning = true;
-
         try {
-            // 从客户端缓存中获取最新数据（该数据由网络包更新）
-            SyncData latestData = ClientResearchData.getSyncData();
-
-            // 如果获取到的是空数据，保持当前数据不变
-            if (latestData.getPlayerId() == -999) {
-                return;
-            }
-
-            // 更新数据和哈希值
-            this.data = latestData;
-            this.lastDataHash = latestData.getDataHash();
-
-            // 更新槽位数据
-            updateSlotsData();
+            doSyncData(false);
         } finally {
             isRunning = false;
         }
     }
 
+    /**
+     * 检查客户端缓存的 SyncData 是否发生变化，如果变化则自动更新
+     */
+    private void checkAndUpdateData() {
+        doSyncData(true);
+    }
+
+    /**
+     * 执行数据同步的核心逻辑
+     * @param checkHash 是否检查哈希值（true=仅在数据变化时更新，false=强制更新）
+     */
+    private void doSyncData(boolean checkHash) {
+        // 从客户端缓存获取最新数据
+        SyncData latestData = ClientResearchData.getSyncData();
+
+        // 如果是空数据，跳过
+        if (latestData.getPlayerId() == -999) {
+            return;
+        }
+
+        // 计算最新数据的哈希值
+        int newHash = latestData.getDataHash();
+
+        // 如果需要检查哈希值且数据没有变化，则跳过更新
+        if (checkHash && newHash == lastDataHash) {
+            return;
+        }
+
+        // 更新数据和哈希值
+        this.data = latestData;
+        this.lastDataHash = newHash;
+
+        // 更新槽位数据
+        updateSlotsData();
+    }
 }

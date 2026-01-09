@@ -24,7 +24,7 @@ public class TechInstance implements Comparable<TechInstance> {
     public static final String ID = "tech_id";
     public static final String STATE = "tech_state";
     public static final String FOCUS = "tech_focus";
-    public static final TechInstance EMPTY = new TechInstance(TechInit.EMPTY,null);
+    public static final TechInstance EMPTY = new TechInstance(TechInit.EMPTY_TECH.get(),null);
 
     private AbstractTech tech;
     private ServerPlayer serverPlayer = null;
@@ -115,6 +115,9 @@ public class TechInstance implements Comparable<TechInstance> {
         return tech.getIdentifier();
     }
 
+    public int getTechStage(){
+        return tech.getTechBuilder().stage;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -213,4 +216,7 @@ public class TechInstance implements Comparable<TechInstance> {
         ).apply(instance,TechInstance::new));
 
 
+    public boolean isEmpty() {
+        return this.tech.equals(TechInit.EMPTY_TECH.get());
+    }
 }
