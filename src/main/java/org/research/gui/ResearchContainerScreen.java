@@ -78,6 +78,8 @@ public abstract class ResearchContainerScreen extends Screen {
 
     @Override
     protected void init() {
+        // 首先调用父类的init()，清空之前的widgets
+        super.init();
 
         // 获取窗口信息，计算内容区域的中心点
         var windowContext = getWindow();
@@ -92,6 +94,16 @@ public abstract class ResearchContainerScreen extends Screen {
         this.mouseHandleBgData.setCenter(centerX, centerY);
         var scaleRange = getMaxOrMinScale();
         this.mouseHandleBgData.setScaleRange(scaleRange.getFirst(), scaleRange.getSecond());
+
+        // 设置移动边界信息
+        this.mouseHandleBgData.setBoundaryDimensions(
+            insideContext.width(),
+            insideContext.height(),
+            windowContext.width(),
+            windowContext.height()
+        );
+        // 设置边界余量（可以调整这个值来改变允许移出的距离）
+        this.mouseHandleBgData.setBoundaryMarginRatio(0.1f);  // 30%的余量
 
         //科技槽位
         var insList = data.getCacheds();
@@ -113,8 +125,6 @@ public abstract class ResearchContainerScreen extends Screen {
             addWidget(slot);
         }
 
-        super.init();
-
     }
 
 
@@ -135,7 +145,7 @@ public abstract class ResearchContainerScreen extends Screen {
 
 
         // 注意：不调用 super.render()，避免重复渲染槽位
-        // super.render(guiGraphics, mouseX, mouseY, partialTick);
+         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
     @Override
@@ -182,7 +192,6 @@ public abstract class ResearchContainerScreen extends Screen {
                 slots.put(entry.getKey(), slot);
                 addWidget(slot);
 
-                System.out.println("[ResearchContainerScreen] Added new slot: " + entry.getKey());
             }
         }
     }
@@ -297,7 +306,8 @@ public abstract class ResearchContainerScreen extends Screen {
             }
         }
 
-        return false;
+        // 如果没有子组件处理事件，调用父类方法以确保正常的事件处理流程
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
@@ -311,12 +321,23 @@ public abstract class ResearchContainerScreen extends Screen {
             dragTotal = 0;
         }
 
-        // 将事件传递给子组件，使用转换后的坐标
+        // 获取转换后的鼠标坐标
         int transformedMouseX = mouseHandleBgData.getTransformedMouseX();
         int transformedMouseY = mouseHandleBgData.getTransformedMouseY();
+
+        // 将事件传递给子组件
         for (var child : children()) {
-            if (child.mouseReleased(transformedMouseX, transformedMouseY, button)) {
-                return true;
+            // 根据组件类型使用不同的坐标
+            if (child instanceof TechSlot) {
+                // TechSlot 使用转换后的坐标
+                if (child.mouseReleased(transformedMouseX, transformedMouseY, button)) {
+                    return true;
+                }
+            } else {
+                // 其他 widget 使用原始坐标
+                if (child.mouseReleased(mouseX, mouseY, button)) {
+                    return true;
+                }
             }
         }
 
@@ -327,7 +348,6 @@ public abstract class ResearchContainerScreen extends Screen {
     public void mouseMoved(double mouseX, double mouseY) {
         // 更新转换后的鼠标坐标
         mouseHandleBgData.updateTransformedMouseCoords(mouseX, mouseY);
-
         super.mouseMoved(mouseX, mouseY);
     }
 
@@ -415,10 +435,6 @@ public abstract class ResearchContainerScreen extends Screen {
         }
         pose.popPose();
         context.disableScissor();
-    }
-
-    public void getGuiContext(PoseStack context){
-
     }
 
     /**
@@ -518,5 +534,13 @@ public abstract class ResearchContainerScreen extends Screen {
 
         // 更新槽位数据
         updateSlotsData();
+    }
+
+    public int getGuiLeft() {
+        return guiLeft;
+    }
+
+    public int getGuiTop() {
+        return guiTop;
     }
 }

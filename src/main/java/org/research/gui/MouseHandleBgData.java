@@ -31,6 +31,15 @@ public class MouseHandleBgData {
     private float minScale = 0.5f;
     private float maxScale = 2.0f;
 
+    // 移动限制（内部背景的尺寸和窗口的尺寸）
+    private int insideWidth = 0;
+    private int insideHeight = 0;
+    private int windowWidth = 0;
+    private int windowHeight = 0;
+
+    // 移动边界的额外余量（允许移动超出一部分，但不会完全移出视野）
+    private float boundaryMarginRatio = 0.3f;  // 允许移动出边界30%的距离
+
     /**
      * 设置窗口中心点（缩放中心）
      */
@@ -45,6 +54,28 @@ public class MouseHandleBgData {
     public void setScaleRange(float minScale, float maxScale) {
         this.minScale = minScale;
         this.maxScale = maxScale;
+    }
+
+    /**
+     * 设置边界尺寸信息（用于计算移动限制）
+     * @param insideWidth 内部背景的宽度
+     * @param insideHeight 内部背景的高度
+     * @param windowWidth 窗口（可视区域）的宽度
+     * @param windowHeight 窗口（可视区域）的高度
+     */
+    public void setBoundaryDimensions(int insideWidth, int insideHeight, int windowWidth, int windowHeight) {
+        this.insideWidth = insideWidth;
+        this.insideHeight = insideHeight;
+        this.windowWidth = windowWidth;
+        this.windowHeight = windowHeight;
+    }
+
+    /**
+     * 设置移动边界的余量比例
+     * @param ratio 0.0-1.0之间的值，表示允许移动超出边界的比例
+     */
+    public void setBoundaryMarginRatio(float ratio) {
+        this.boundaryMarginRatio = Math.max(0.0f, Math.min(1.0f, ratio));
     }
 
     /**
@@ -82,6 +113,9 @@ public class MouseHandleBgData {
         // 更新缩放值
         this.scrollOffs = newScale;
 
+        // 缩放后应用边界限制（但这不会破坏鼠标指向的位置）
+        clampOffset();
+
         // 更新当前鼠标的转换坐标
         updateTransformedMouseCoords(mouseX, mouseY);
 
@@ -99,6 +133,61 @@ public class MouseHandleBgData {
         // 除以 scrollOffs 是为了在不同缩放级别下保持一致的拖拽速度
         this.offsetX += (float)dragX / scrollOffs;
         this.offsetY += (float)dragY / scrollOffs;
+
+        // 应用移动限制
+        clampOffset();
+    }
+
+    /**
+     * 限制偏移量在合理范围内
+     * 允许移动超出原始边界，但保证至少有一部分内容始终可见
+     * 这不会影响缩放功能，因为缩放时会重新计算偏移量
+     */
+    private void clampOffset() {
+        if (insideWidth <= 0 || insideHeight <= 0 || windowWidth <= 0 || windowHeight <= 0) {
+            return;  // 如果没有设置边界信息，不做限制
+        }
+
+        // 计算当前缩放后的内部背景尺寸
+        float scaledInsideWidth = insideWidth * scrollOffs;
+        float scaledInsideHeight = insideHeight * scrollOffs;
+
+        // 计算允许的最大偏移量（考虑余量）
+        // 当内部背景向右移动时，offsetX增加
+        // 最大允许的offsetX = 让内部背景左边界移动到窗口右边界 - 余量
+        float marginX = windowWidth * boundaryMarginRatio;
+        float marginY = windowHeight * boundaryMarginRatio;
+
+        // 计算内部背景在窗口中的位置范围
+        // 内部背景左边界的屏幕坐标 = centerX - scaledInsideWidth/2 + offsetX
+        // 内部背景右边界的屏幕坐标 = centerX + scaledInsideWidth/2 + offsetX
+
+        // 窗口的左边界 = centerX - windowWidth/2
+        // 窗口的右边界 = centerX + windowWidth/2
+
+        float windowLeft = centerX - windowWidth / 2.0f;
+        float windowRight = centerX + windowWidth / 2.0f;
+        float windowTop = centerY - windowHeight / 2.0f;
+        float windowBottom = centerY + windowHeight / 2.0f;
+
+        // 计算最小和最大偏移量
+        // 最小offsetX: 内部背景右边界不能移出窗口左边界太多
+        // centerX + scaledInsideWidth/2 + offsetX >= windowLeft - marginX
+        // offsetX >= windowLeft - marginX - centerX - scaledInsideWidth/2
+        float minOffsetX = windowLeft - marginX - centerX - scaledInsideWidth / 2;
+
+        // 最大offsetX: 内部背景左边界不能移出窗口右边界太多
+        // centerX - scaledInsideWidth/2 + offsetX <= windowRight + marginX
+        // offsetX <= windowRight + marginX - centerX + scaledInsideWidth/2
+        float maxOffsetX = windowRight + marginX - centerX + scaledInsideWidth / 2;
+
+        // 同理计算Y轴的限制
+        float minOffsetY = windowTop - marginY - centerY - scaledInsideHeight / 2;
+        float maxOffsetY = windowBottom + marginY - centerY + scaledInsideHeight / 2;
+
+        // 应用限制
+        this.offsetX = Math.max(minOffsetX, Math.min(maxOffsetX, this.offsetX));
+        this.offsetY = Math.max(minOffsetY, Math.min(maxOffsetY, this.offsetY));
     }
 
     /**
