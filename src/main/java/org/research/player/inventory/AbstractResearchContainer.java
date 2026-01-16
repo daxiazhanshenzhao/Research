@@ -1,18 +1,5 @@
 package org.research.player.inventory;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
-import org.joml.Vector2i;
-import org.research.api.tech.AbstractTech;
-import org.research.api.tech.PlayerTechTreeData;
-import org.research.api.tech.TechInstance;
-import org.research.api.util.BlitContext;
-import org.research.gui.component.TechSlot;
-
-import java.util.HashMap;
-
 
 /**
  * container负责给PlayerTechTreeData初始化，

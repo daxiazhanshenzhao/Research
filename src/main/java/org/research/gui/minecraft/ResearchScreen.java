@@ -1,13 +1,16 @@
-package org.research.gui;
+package org.research.gui.minecraft;
 
 import com.mojang.datafixers.util.Pair;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.research.api.tech.SyncData;
 import org.research.api.util.BlitContext;
 import org.research.api.util.Texture;
-import org.research.gui.component.OpenRecipeWight;
+import org.research.gui.minecraft.component.OpenRecipeWidget;
+import org.research.gui.minecraft.component.SearchEditBox;
 
 @OnlyIn(value = Dist.CLIENT)
 public class ResearchScreen extends ResearchContainerScreen {
@@ -34,23 +37,20 @@ public class ResearchScreen extends ResearchContainerScreen {
         int guiLeft = (this.width - 256) / 2;
         int guiTop = (this.height - 256) / 2;
 
-        addRenderableWidget(new OpenRecipeWight(guiLeft+18, guiTop+104, this));
+        addRenderableWidget(new OpenRecipeWidget(guiLeft+18, guiTop+104, this));
+        addRenderableWidget(new SearchEditBox(Minecraft.getInstance().font, guiLeft+12,guiTop+98,71,23, Component.empty()));
+
+
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // 先渲染父类的内容（背景、inside区域等）
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-
-        var pose = guiGraphics.pose();
-        pose.pushPose();
-        guiGraphics.pose().translate(0, 0, 1500);
-
+        // 先渲染配方背景（底层）
         renderRecipeBg(guiGraphics);
 
-        pose.popPose();
-
-
+        // 然后渲染父类的内容（背景、inside区域、子组件等）
+        // 这样SearchEditBox等IOpenRenderable组件会在配方背景之上
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
     private void renderRecipeBg(GuiGraphics guiGraphics) {
@@ -89,6 +89,7 @@ public class ResearchScreen extends ResearchContainerScreen {
         super.tick();
     }
 
+    @Override
     public boolean isOpenRecipeBook() {
         return openRecipeBook;
     }

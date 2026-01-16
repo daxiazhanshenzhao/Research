@@ -5,7 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 import org.research.api.client.ClientResearchData;
 import org.research.api.tech.SyncData;
-import org.research.gui.ResearchScreen;
+import org.research.gui.minecraft.ResearchScreen;
 
 import java.util.function.Supplier;
 

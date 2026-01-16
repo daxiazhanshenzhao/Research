@@ -9,6 +9,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import org.research.api.init.ItemInit;
 import org.research.api.init.PacketInit;
 import org.research.api.init.TechInit;
 import org.slf4j.Logger;
@@ -20,7 +21,7 @@ import java.util.Locale;
 public class Research {
 
     public static final String MODID = "research";
-
+    public static final String LDLIB = "ldlib";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     /**
@@ -37,6 +38,7 @@ public class Research {
         IEventBus modEventBus = FMLJavaModLoadingContext
                 .get().getModEventBus();
 
+        ItemInit.register(modEventBus);
         TechInit.register(modEventBus);
 
         modEventBus.addListener(this::setupClient);

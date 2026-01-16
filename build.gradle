@@ -33,6 +33,11 @@ repositories {
     maven {
         url "https://cursemaven.com"
     }
+
+    maven {
+        name "firstdarkdev"
+        url "https://maven.firstdark.dev/snapshots"
+    }
 }
 
 base {
@@ -149,15 +154,16 @@ dependencies {
     // modLocalRuntime "mezz.jei:jei-${mc_version}-neoforge:${jei_version}"
 
 
-    modImplementation("curse.maven:astages-1120180:6892926")
+//    modImplementation("curse.maven:astages-1120180:6892926")
 
 //    implementation ("dev.latvian.mods:rhino-forge:2001")
 //    implementation ("dev.architectury:architectury-9.2.14:forge")
 //    implementation ("dev.latvian.mods:kubejs-forge:2001")
 
-    modImplementation "dev.architectury:architectury-forge:${architectury_version}"
-    modImplementation "dev.latvian.mods:rhino-forge:${rhino_version}"
-    modImplementation "dev.latvian.mods:kubejs-forge:${kubejs_version}"
+//    modImplementation "dev.architectury:architectury-forge:${architectury_version}"
+//    modImplementation "dev.latvian.mods:rhino-forge:${rhino_version}"
+//    modImplementation "dev.latvian.mods:kubejs-forge:${kubejs_version}"
+    modImplementation ("com.lowdragmc.ldlib:ldlib-forge-${minecraft_version}:${ldlib_version}")
     // Example mod dependency using a mod jar from ./libs with a flat dir repository
     // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
     // The group id is ignored when searching -- in this case, it is "blank"
@@ -182,6 +188,10 @@ mixin {
 
 dependencies {
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
 }
 
 jar {

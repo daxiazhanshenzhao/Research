@@ -29,6 +29,7 @@ public class OpenScreen extends KeyMapping {
         if (event.phase == TickEvent.Phase.END) {
             while (KeyMappingInit.OPEN_RESEARCH_SCREEN.get().consumeClick()) {
                 ScreenProvider.serverOpenResearchScreen();
+
             }
         }
     }

@@ -1,14 +1,11 @@
-package org.research.gui.component;
+package org.research.gui.minecraft.component;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
@@ -16,9 +13,8 @@ import org.research.api.recipe.IRecipe;
 import org.research.api.tech.TechInstance;
 import org.research.api.util.BlitContext;
 import org.research.api.util.Texture;
-import org.research.gui.ResearchContainerScreen;
+import org.research.gui.minecraft.ResearchContainerScreen;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 public class TechSlot extends AbstractButton {

@@ -1,4 +1,4 @@
-package org.research.gui.component;
+package org.research.gui.minecraft.component;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
@@ -6,11 +6,9 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 import org.research.api.util.BlitContext;
 import org.research.api.util.Texture;
-import org.research.gui.ResearchScreen;
+import org.research.gui.minecraft.ResearchScreen;
 
-import java.awt.*;
-
-public class OpenRecipeWight extends AbstractButton {
+public class OpenRecipeWidget extends AbstractButton {
 
 
     private static final int offX = 110;
@@ -28,7 +26,7 @@ public class OpenRecipeWight extends AbstractButton {
     private static final BlitContext OFF_FOCUSED = BlitContext.of(Texture.TEXTURE, 264, 27, 7, 11);
 
 
-    public OpenRecipeWight(int x,int y, ResearchScreen screen) {
+    public OpenRecipeWidget(int x, int y, ResearchScreen screen) {
         super(x, y, width, height, Component.empty());
         this.screen = screen;
     }
