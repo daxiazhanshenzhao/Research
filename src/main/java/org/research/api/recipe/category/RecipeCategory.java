@@ -1,4 +1,4 @@
-package org.research.category;
+package org.research.api.recipe.category;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -7,8 +7,6 @@ import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
 import org.research.Research;
-import org.research.api.recipe.category.RecipeBuilder;
-import org.research.api.recipe.category.SlotBuilder;
 
 import javax.annotation.Nullable;
 

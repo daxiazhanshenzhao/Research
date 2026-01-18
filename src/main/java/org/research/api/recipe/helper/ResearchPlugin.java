@@ -5,9 +5,9 @@ import org.research.api.recipe.category.CatalystsRegistration;
 
 public interface ResearchPlugin {
 
-    ResourceLocation getPluginId();
+    public abstract ResourceLocation getPluginId();
 
-    void registerRecipeCategories(CatalystsRegistration registration);
+    public abstract void registerRecipeCategories(CatalystsRegistration registration);
 
-    
+
 }

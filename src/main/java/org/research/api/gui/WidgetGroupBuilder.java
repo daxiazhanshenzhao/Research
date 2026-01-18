@@ -1,6 +1,6 @@
 package org.research.api.gui;
 
-import com.lowdragmc.lowdraglib.gui.widget.WidgetGroup;
+
 import lombok.Getter;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.resources.ResourceLocation;

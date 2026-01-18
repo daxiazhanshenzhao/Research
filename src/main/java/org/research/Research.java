@@ -41,11 +41,14 @@ public class Research {
         modEventBus.addListener(this::commonSetup);
         
     }
+
+    public static ResourceLocation empty() {
+        return Research.asResource("empty");
+    }
+
     private void setupClient(FMLClientSetupEvent evt) {
         evt.enqueueWork(() -> {
-            // 触发配方 GUI 管理器注册事件
-            IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-            modEventBus.post(new RegisterRecipeGUIEvent());
+
         });
     }
 

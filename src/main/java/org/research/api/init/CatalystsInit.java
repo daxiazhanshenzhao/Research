@@ -1,12 +1,11 @@
 package org.research.api.init;
 
 
-import mezz.jei.api.JeiPlugin;
 import net.minecraft.resources.ResourceLocation;
 import org.research.Research;
 import org.research.api.recipe.category.AutoResearchPlugin;
 import org.research.api.recipe.category.CatalystsRegistration;
-import org.research.api.recipe.category.CraftingTableCategory;
+import org.research.category.CraftingTableCategory;
 import org.research.api.recipe.helper.ResearchPlugin;
 
 

@@ -1,7 +1,5 @@
 package org.research.api.recipe.category;
 
-import org.research.category.RecipeCategory;
-
 import java.util.ArrayList;
 import java.util.List;
 
