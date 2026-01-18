@@ -2,12 +2,8 @@ package org.research.api.tech;
 
 
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.eventbus.api.Event;
-import org.research.Research;
-import org.research.api.recipe.RecipeWrapper;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Objects;
 
 public abstract class AbstractTech {

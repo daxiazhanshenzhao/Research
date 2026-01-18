@@ -1,6 +1,7 @@
 package org.research.gui.minecraft.component;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -9,6 +10,7 @@ import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
+import org.research.Research;
 import org.research.api.recipe.IRecipe;
 import org.research.api.tech.TechInstance;
 import org.research.api.util.BlitContext;
@@ -109,21 +111,20 @@ public class TechSlot extends AbstractButton {
                     if (recipe != null) {
                         var item = recipe.getResultItem(minecraft.getConnection().registryAccess());
                         if (!item.isEmpty()) {
+
+                            guiGraphics.pose().pushPose();
+                            guiGraphics.pose().translate(0, 0, -100);
                             guiGraphics.renderItem(item, getX()+2, getY()+2);
+                            guiGraphics.pose().popPose();
 
                         }
                     }
                 }
             }
         }
-
         //4.渲染锁（最上层）
         if (tech.getState().isLocked()){
-            // 将锁渲染提升到更高层级
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(0, 0, 1000);
             guiGraphics.blit(LOCK.texture(),getX()+5,getY()+3,LOCK.u(),LOCK.v(),LOCK.width(),LOCK.height(),512,512);
-            guiGraphics.pose().popPose();
         }
     }
 
@@ -145,7 +146,8 @@ public class TechSlot extends AbstractButton {
         if (!this.clicked(mouseX, mouseY) || button != GLFW.GLFW_MOUSE_BUTTON_1) {
             return false;
         }
-
+        this.playDownSound(Minecraft.getInstance().getSoundManager());
+        Research.LOGGER.info(tech.getTech().getBgWithType().toString());
         // 双击检测
         int currentTick = screen.getOpenTicks();
         int ticksSinceLastClick = currentTick - lastClickTick;
@@ -153,6 +155,8 @@ public class TechSlot extends AbstractButton {
         if (ticksSinceLastClick <= DOUBLE_CLICK_TICKS) {
             // 双击 - 清除焦点
             screen.clearFocus(this.tech.getIdentifier());
+            clearFocus();
+
         } else {
             // 单击 - 设置焦点
             if (!tech.getState().isLocked()) {
@@ -178,5 +182,11 @@ public class TechSlot extends AbstractButton {
 
     }
 
+    private void clearFocus() {
+        ComponentPath componentpath = this.getCurrentFocusPath();
+        if (componentpath != null) {
+            componentpath.applyFocus(false);
+        }
 
+    }
 }

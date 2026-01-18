@@ -1,6 +1,6 @@
 package org.research.gui.minecraft.component;
 
-public interface IOpenRenderable {
+public interface IOpenRenderable{
 
-    void setZLevel(int level);
+    int getZLevel();
 }

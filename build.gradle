@@ -38,6 +38,23 @@ repositories {
         name "firstdarkdev"
         url "https://maven.firstdark.dev/snapshots"
     }
+
+    //jei
+    maven {
+        // location of the maven that hosts JEI files before January 2023
+        name = "Progwml6's maven"
+        url = "https://dvs1.progwml6.com/files/maven/"
+    }
+    maven {
+        // location of the maven that hosts JEI files since January 2023
+        name = "Jared's maven"
+        url = "https://maven.blamejared.com/"
+    }
+    maven {
+        // location of a maven mirror for JEI files, as a fallback
+        name = "ModMaven"
+        url = "https://modmaven.dev"
+    }
 }
 
 base {
@@ -164,6 +181,7 @@ dependencies {
 //    modImplementation "dev.latvian.mods:rhino-forge:${rhino_version}"
 //    modImplementation "dev.latvian.mods:kubejs-forge:${kubejs_version}"
     modImplementation ("com.lowdragmc.ldlib:ldlib-forge-${minecraft_version}:${ldlib_version}")
+    modImplementation ("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
     // Example mod dependency using a mod jar from ./libs with a flat dir repository
     // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
     // The group id is ignored when searching -- in this case, it is "blank"

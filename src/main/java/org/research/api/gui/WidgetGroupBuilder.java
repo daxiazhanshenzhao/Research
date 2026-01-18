@@ -8,6 +8,8 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.ArrayList;
 import java.util.List;
 
+
+@Deprecated
 public class WidgetGroupBuilder {
 
     /**

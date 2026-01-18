@@ -2,10 +2,16 @@ package org.research.gui.minecraft;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.datafixers.util.Pair;
+import lombok.Getter;
+import lombok.Setter;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.advancements.AdvancementWidget;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 import org.research.api.client.ClientResearchData;
 import org.research.api.gui.MouseHandleBgData;
@@ -13,9 +19,10 @@ import org.research.api.init.PacketInit;
 import org.research.api.tech.*;
 import org.research.api.tech.graphTree.Vec2i;
 import org.research.api.util.BlitContext;
-import org.research.gui.minecraft.component.IOpenRenderable;
-import org.research.gui.minecraft.component.TechSlot;
+import org.research.api.util.Texture;
+import org.research.gui.minecraft.component.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,11 +33,12 @@ import org.research.network.research.ClientSetFocusPacket;
 //AdvancementsScreen
 //AdvancementWidget
 
+@OnlyIn(value = Dist.CLIENT)
 public abstract class ResearchContainerScreen extends Screen {
     //data
     private SyncData data;
 
-
+    @Getter
     private Map<ResourceLocation,TechSlot> slots = new HashMap<>();
 
     /**
@@ -54,7 +62,14 @@ public abstract class ResearchContainerScreen extends Screen {
      *
      * 4. 双击取消：
      *    - 双击任何已focus的槽位会同时取消客户端和服务端的focus状态
+     * -- GETTER --
+     *  获取当前客户端focus的槽位
+     *
+     * @return 当前focus的槽位，如果没有则返回null
+
      */
+    @Setter
+    @Getter
     private TechSlot focusSlot = TechSlot.EMPTY;
     //render
 
@@ -64,27 +79,62 @@ public abstract class ResearchContainerScreen extends Screen {
 
     private int guiLeft,guiTop;
 
-
     private int openTicks = 0;
 
     // 用于检测数据变化的哈希值
     private int lastDataHash = 0;
 
+    /**
+     * -- GETTER --
+     *  返回配方书是否打开
+     */
+    // ResearchScreen 特有的字段
+    @Setter
+    @Getter
+    private boolean openRecipeBook = false;
+    private static final BlitContext RECIPE_BG_OPEN = BlitContext.of(Texture.TEXTURE,55,47,146,213);
+    private static final BlitContext RECIPE_BG_OFF = BlitContext.of(Texture.TEXTURE,9,46,35,213);
 
 
-    protected ResearchContainerScreen(SyncData data) {
+
+    public ResearchContainerScreen(SyncData data) {
         super(Component.empty());
         this.data = data;
         this.lastDataHash = data.getDataHash(); // 初始化哈希值
-        init();
+    }
+
+    private void addRecipePageWidgets(){
+
+        // 添加 ResearchScreen 特有的组件
+        int guiLeft = (this.width - 256) / 2;
+        int guiTop = (this.height - 256) / 2;
+
+        addRenderableWidget(new OpenRecipeWidget(guiLeft+18, guiTop+104, this));
+        addRenderableWidget(new SearchEditBox(this.font, guiLeft+12,guiTop+98,71,23, this));
+
+        // 生成 5列4排的 RecipeTechSlot，每个22x22，紧挨着排列
+        int recipeStartX = guiLeft + 13;  // 配方书区域起始X
+        int recipeStartY = guiTop + 126;  // 配方书区域起始Y（搜索框下方）
+        int slotSize = 22;  // 每个槽位大小 22x22
+        int columns = 5;  // 5列
+        int rows = 4;     // 4排
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                int x = recipeStartX + col * slotSize;
+                int y = recipeStartY + row * slotSize;
+
+            }
+        }
     }
 
     @Override
     protected void init() {
         // 首先调用父类的init()，清空之前的widgets
+
         super.init();
 
-        // 获取窗口信息，计算内容区域的中心点
+        // 计算窗口和内部坐标
         var windowContext = getWindow();
         var insideContext = getInside();
         int windowX = (this.width - 256) / 2 + windowContext.u();
@@ -106,28 +156,59 @@ public abstract class ResearchContainerScreen extends Screen {
             windowContext.height()
         );
         // 设置边界余量（可以调整这个值来改变允许移出的距离）
-        this.mouseHandleBgData.setBoundaryMarginRatio(0.1f);  // 30%的余量
+        this.mouseHandleBgData.setBoundaryMarginRatio(0.1f);  // 10%的余量
 
-        //科技槽位
+        // 创建科技槽位
         var insList = data.getCacheds();
         var vecList = data.getVecMap();
-
-
-        // 计算内部背景的起始位置
         int insideX = centerX - insideContext.width() / 2;
         int insideY = centerY - insideContext.height() / 2;
 
         for (TechInstance instance : insList.values()) {
             var vec = vecList.getOrDefault(instance.getIdentifier(), Vec2i.EMPTY);
-
-            // 将槽位坐标相对于内部背景的左上角定位
             var slot = new TechSlot(insideX + vec.x, insideY + vec.y, instance, this);
-            slots.put(instance.getIdentifier(),slot);
-            // 使用 addWidget 而不是 addRenderableWidget，避免自动渲染
-            // 槽位将在 renderInside() 中手动渲染
+            slots.put(instance.getIdentifier(), slot);
             addWidget(slot);
         }
 
+        addRecipePageWidgets();
+
+
+        // 对 renderables 进行排序，让 IOpenRenderable 组件根据 Z 层级排序
+        sortRenderablesByZLevel();
+
+    }
+
+    /**
+     * 对可渲染组件进行排序，IOpenRenderable 组件根据 Z 层级排序（Z 层级低的先渲染）
+     */
+    private void sortRenderablesByZLevel() {
+        // 将 renderables 转换为 List 以便排序
+        var renderableList = new ArrayList<>(this.renderables);
+
+        // 排序：IOpenRenderable 组件按 Z 层级排序，其他组件保持原有顺序
+        renderableList.sort((r1, r2) -> {
+            boolean isR1OpenRenderable = r1 instanceof IOpenRenderable;
+            boolean isR2OpenRenderable = r2 instanceof IOpenRenderable;
+
+            // 如果都是 IOpenRenderable，按 Z 层级排序
+            if (isR1OpenRenderable && isR2OpenRenderable) {
+                int z1 = ((IOpenRenderable) r1).getZLevel();
+                int z2 = ((IOpenRenderable) r2).getZLevel();
+                return Integer.compare(z1, z2); // Z 层级低的先渲染
+            }
+
+            // IOpenRenderable 组件优先渲染（排在前面）
+            if (isR1OpenRenderable) return -1;
+            if (isR2OpenRenderable) return 1;
+
+            // 其他组件保持原有顺序
+            return 0;
+        });
+
+        // 清空并重新添加排序后的组件
+        this.renderables.clear();
+        this.renderables.addAll(renderableList);
     }
 
 
@@ -137,14 +218,33 @@ public abstract class ResearchContainerScreen extends Screen {
         this.guiLeft = (this.width-256)/2;
         this.guiTop = (this.height-256)/2;
 
-
         updateSlotPositions();
         renderBg(guiGraphics, guiLeft, guiTop);
-
         renderInside(guiGraphics, mouseX, mouseY, partialTick);
 
-        // 3. 渲染子组件，但过滤掉IOpenRenderable组件（如果配方书未打开）
+        // 正确的 pose 操作顺序
+        var pose = guiGraphics.pose();
+        pose.pushPose();  // 先保存当前状态
+        pose.translate(0, 0, 100);  // 然后进行变换
+        renderRecipeBg(guiGraphics);
         renderFilteredChildren(guiGraphics, mouseX, mouseY, partialTick);
+        renderRecipeSlots(guiGraphics);
+        pose.popPose();  // 最后恢复状态
+    }
+
+    private void renderRecipeSlots(GuiGraphics guiGraphics) {
+
+
+    }
+
+    /**
+     * 渲染配方书背景
+     */
+    private void renderRecipeBg(GuiGraphics guiGraphics) {
+        var context = openRecipeBook ? RECIPE_BG_OPEN : RECIPE_BG_OFF;
+        int x = guiLeft+1;
+        int y = guiTop+18;
+        guiGraphics.blit(context.texture(), x, y, context.u(), context.v(), context.width(), context.height(), 512, 512);
     }
 
     /**
@@ -152,28 +252,29 @@ public abstract class ResearchContainerScreen extends Screen {
      */
     protected void renderFilteredChildren(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         for (var renderable : this.renderables) {
-            // 如果是IOpenRenderable接口的实现，只在配方书打开时渲染
+            // 如果是IOpenRenderable接口的实现
             if (renderable instanceof IOpenRenderable) {
-                if (isOpenRecipeBook()) {
+                // OpenRecipeWidget 始终渲染（用于开关配方书）
+                if (renderable instanceof OpenRecipeWidget) {
                     renderable.render(guiGraphics, mouseX, mouseY, partialTick);
                 }
-            } else {
-                // 其他组件正常渲染
-                renderable.render(guiGraphics, mouseX, mouseY, partialTick);
+                // 其他 IOpenRenderable 组件只在配方书打开时渲染
+                else if (isOpenRecipeBook()) {
+                    renderable.render(guiGraphics, mouseX, mouseY, partialTick);
+                }
             }
+
         }
     }
 
-    /**
-     * 子类需要实现此方法，返回配方书是否打开
-     */
-    protected abstract boolean isOpenRecipeBook();
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
 
     @Override
     public void tick() {
         openTicks++;
-
-        // 自动检测 SyncData 变化
         checkAndUpdateData();
     }
 
@@ -199,72 +300,150 @@ public abstract class ResearchContainerScreen extends Screen {
         // 如果有新的科技实例，添加它们
         for (var entry : insList.entrySet()) {
             if (!slots.containsKey(entry.getKey())) {
-                var windowContext = getWindow();
-                var insideContext = getInside();
-                int windowX = (this.width - 256) / 2 + windowContext.u();
-                int windowY = (this.height - 256) / 2 + windowContext.v();
-                int centerX = windowX + windowContext.width() / 2;
-                int centerY = windowY + windowContext.height() / 2;
-                int insideX = centerX - insideContext.width() / 2;
-                int insideY = centerY - insideContext.height() / 2;
-
+                var coords = calculateWindowCoords();
                 var vec = data.getVecMap().getOrDefault(entry.getKey(), Vec2i.EMPTY);
-                var slot = new TechSlot(insideX + vec.x, insideY + vec.y, entry.getValue(), this);
+                var slot = new TechSlot(coords.insideX + vec.x, coords.insideY + vec.y, entry.getValue(), this);
                 slots.put(entry.getKey(), slot);
                 addWidget(slot);
-
             }
         }
     }
 
-    private void handleCenter() {
+    /**
+     * 检查子组件是否应该被跳过（基于 IOpenRenderable 接口和配方书状态）
+     */
+    private boolean shouldSkipChild(Object child) {
+        // OpenRecipeWidget 始终可以交互（用于开关配方书）
+        if (child instanceof OpenRecipeWidget) {
+            return false;
+        }
+        // 其他 IOpenRenderable 组件只在配方书打开时才能交互
+        return child instanceof IOpenRenderable && !isOpenRecipeBook();
+    }
 
+    /**
+     * 转换后的鼠标坐标辅助类
+     */
+    private static class TransformedMouseCoords {
+        final int transformedX, transformedY;
+
+        TransformedMouseCoords(int transformedX, int transformedY) {
+            this.transformedX = transformedX;
+            this.transformedY = transformedY;
+        }
 
     }
 
     /**
-     * 更新所有槽位的位置，确保它们与内部背景对齐
+     * 更新并获取转换后的鼠标坐标
      */
-    private void updateSlotPositions() {
-        // 获取窗口信息，计算内容区域的中心点
+    private TransformedMouseCoords updateAndGetTransformedCoords(double mouseX, double mouseY) {
+        mouseHandleBgData.updateTransformedMouseCoords(mouseX, mouseY);
+        return new TransformedMouseCoords(
+            mouseHandleBgData.getTransformedMouseX(),
+            mouseHandleBgData.getTransformedMouseY()
+        );
+    }
+
+    /**
+     * 计算窗口坐标的辅助类
+     */
+    private static class WindowCoords {
+        final int windowX, windowY, centerX, centerY, insideX, insideY;
+
+        WindowCoords(int windowX, int windowY, int centerX, int centerY, int insideX, int insideY) {
+            this.windowX = windowX;
+            this.windowY = windowY;
+            this.centerX = centerX;
+            this.centerY = centerY;
+            this.insideX = insideX;
+            this.insideY = insideY;
+        }
+    }
+
+    /**
+     * 计算窗口和内部背景的坐标（提取重复代码）
+     */
+    private WindowCoords calculateWindowCoords() {
         var windowContext = getWindow();
         var insideContext = getInside();
         int windowX = guiLeft + windowContext.u();
         int windowY = guiTop + windowContext.v();
         int centerX = windowX + windowContext.width() / 2;
         int centerY = windowY + windowContext.height() / 2;
-
-        // 计算内部背景的起始位置
         int insideX = centerX - insideContext.width() / 2;
         int insideY = centerY - insideContext.height() / 2;
+        return new WindowCoords(windowX, windowY, centerX, centerY, insideX, insideY);
+    }
 
-        // 更新每个槽位的位置
+    /**
+     * 检查鼠标是否在窗口区域内
+     * @param mouseX 鼠标X坐标
+     * @param mouseY 鼠标Y坐标
+     * @return true 如果鼠标在窗口区域内，false 否则
+     */
+    private boolean isMouseInWindow(double mouseX, double mouseY) {
+        var windowContext = getWindow();
+        int windowX = guiLeft + windowContext.u();
+        int windowY = guiTop + windowContext.v();
+        int windowWidth = windowContext.width();
+        int windowHeight = windowContext.height();
+
+        return mouseX >= windowX && mouseX <= windowX + windowWidth &&
+               mouseY >= windowY && mouseY <= windowY + windowHeight;
+    }
+
+    /**
+     * 检查鼠标是否在配方书区域内
+     * @param mouseX 鼠标X坐标
+     * @param mouseY 鼠标Y坐标
+     * @return true 如果配方书打开且鼠标在配方书区域内，false 否则
+     */
+    private boolean isMouseInRecipeBook(double mouseX, double mouseY) {
+        if (!openRecipeBook) {
+            return false;
+        }
+
+        // 配方书的渲染区域（根据 RECIPE_BG_OPEN 的尺寸）
+        // RECIPE_BG_OPEN = BlitContext.of(Texture.TEXTURE,55,47,146,213);
+        // 宽度: 146, 高度: 213
+        int recipeX = guiLeft + 1;
+        int recipeY = guiTop + 18;
+        int recipeWidth = 146;
+        int recipeHeight = 213;
+
+        return mouseX >= recipeX && mouseX <= recipeX + recipeWidth &&
+               mouseY >= recipeY && mouseY <= recipeY + recipeHeight;
+    }
+
+    /**
+     * 更新所有槽位的位置，确保它们与内部背景对齐
+     */
+    private void updateSlotPositions() {
+        var coords = calculateWindowCoords();
         var vecList = data.getVecMap();
+
         for (var entry : slots.entrySet()) {
             var vec = vecList.getOrDefault(entry.getKey(), Vec2i.EMPTY);
             var slot = entry.getValue();
-            // 设置槽位相对于内部背景的位置
-            slot.setX(insideX + vec.x);
-            slot.setY(insideY + vec.y);
+            slot.setX(coords.insideX + vec.x);
+            slot.setY(coords.insideY + vec.y);
         }
     }
 
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        // 获取窗口区域信息
-        var windowContext = getWindow();
-        int windowX = guiLeft + windowContext.u();
-        int windowY = guiTop + windowContext.v();
-        int windowWidth = windowContext.width();
-        int windowHeight = windowContext.height();
-        
         // 检查鼠标是否在窗口区域内
-        if (mouseX < windowX || mouseX > windowX + windowWidth || 
-            mouseY < windowY || mouseY > windowY + windowHeight) {
+        if (!isMouseInWindow(mouseX, mouseY)) {
             return false;  // 鼠标不在窗口区域内，不处理缩放
         }
         
+        // 如果鼠标在配方书区域内，不处理背景缩放
+        if (isMouseInRecipeBook(mouseX, mouseY)) {
+            return false;
+        }
+
         // 使用MouseHandleBgData处理滚轮缩放
         return mouseHandleBgData.handleMouseScroll(mouseX, mouseY, delta);
     }
@@ -273,39 +452,47 @@ public abstract class ResearchContainerScreen extends Screen {
     private int dragTotal = 0;
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        // 检查鼠标是否在窗口区域内
+        if (!isMouseInWindow(mouseX, mouseY)) {
+            return false;  // 鼠标不在窗口区域内，不处理拖拽
+        }
+
+        // 如果鼠标在配方书区域内，不处理背景拖拽，但允许配方书内部组件处理
+        if (isMouseInRecipeBook(mouseX, mouseY)) {
+            // 只让配方书内部的 IOpenRenderable 组件处理事件
+            for (var child : List.copyOf(children())) {
+                if (child instanceof IOpenRenderable) {
+                    if (child.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
+                        return true;
+                    }
+                }
+            }
+            return false;  // 配方书区域内不处理背景拖拽和槽位交互
+        }
+
         if (button == GLFW.GLFW_MOUSE_BUTTON_1){
             dragTotal += Math.abs(dragX);
             dragTotal += Math.abs(dragY);
 
             if (dragTotal >= 1){
                 isDragging = true;
-
-                // 使用MouseHandleBgData处理拖拽
                 mouseHandleBgData.handleMouseDragged(dragX, dragY);
             }
         }
 
-        // 更新转换后的鼠标坐标
-        mouseHandleBgData.updateTransformedMouseCoords(mouseX, mouseY);
-
-        // 获取转换后的鼠标坐标
-        int transformedMouseX = mouseHandleBgData.getTransformedMouseX();
-        int transformedMouseY = mouseHandleBgData.getTransformedMouseY();
+        var coords = updateAndGetTransformedCoords(mouseX, mouseY);
 
         for (var child : List.copyOf(children())) {
-            // 如果是IOpenRenderable组件，只在配方书打开时才处理事件
-            if (child instanceof IOpenRenderable && !isOpenRecipeBook()) {
+            if (shouldSkipChild(child)) {
                 continue;
             }
 
             // 根据组件类型使用不同的坐标
             if (child instanceof TechSlot) {
-                // TechSlot 使用转换后的坐标（受缩放和平移影响）
-                if (child.mouseDragged(transformedMouseX, transformedMouseY, button, dragX, dragY)) {
+                if (child.mouseDragged(coords.transformedX, coords.transformedY, button, dragX, dragY)) {
                     return true;
                 }
             } else {
-                // 其他 widget 使用原始坐标（不受变换影响）
                 if (child.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
                     return true;
                 }
@@ -317,59 +504,65 @@ public abstract class ResearchContainerScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // 如果正在拖拽，忽略点击事件
+        // 检查鼠标是否在窗口区域内
+        if (!isMouseInWindow(mouseX, mouseY)) {
+            return false;  // 鼠标不在窗口区域内，不处理点击
+        }
+
         if (isDragging) {
             return false;
         }
 
-        // 更新转换后的鼠标坐标
-        mouseHandleBgData.updateTransformedMouseCoords(mouseX, mouseY);
-
-        // 获取转换后的鼠标坐标
-        int transformedMouseX = mouseHandleBgData.getTransformedMouseX();
-        int transformedMouseY = mouseHandleBgData.getTransformedMouseY();
-
-        // 只对鼠标坐标范围内的子组件触发点击事件
-        for (var child : List.copyOf(children())) {
-            // 如果是IOpenRenderable组件，只在配方书打开时才处理事件
-            if (child instanceof IOpenRenderable) {
-                if (!isOpenRecipeBook()) {
-                    System.out.println("Skipping IOpenRenderable (recipe book closed): " + child.getClass().getSimpleName());
-                    continue;  // 跳过此组件
-                } else {
-                    System.out.println("Processing IOpenRenderable (recipe book open): " + child.getClass().getSimpleName() +
-                                     " at (" + mouseX + ", " + mouseY + ")");
+        // 如果鼠标在配方书区域内，只处理配方书内部组件
+        if (isMouseInRecipeBook(mouseX, mouseY)) {
+            // 只让配方书内部的 IOpenRenderable 组件处理事件
+            for (var child : List.copyOf(children())) {
+                if (child instanceof IOpenRenderable) {
+                    if (child.isMouseOver(mouseX, mouseY)) {
+                        if (child.mouseClicked(mouseX, mouseY, button)) {
+                            setFocused(child);
+                            return true;
+                        }
+                    }
                 }
+            }
+            return false;  // 配方书区域内不处理槽位点击
+        }
+
+        var coords = updateAndGetTransformedCoords(mouseX, mouseY);
+
+        for (var child : List.copyOf(children())) {
+            if (shouldSkipChild(child)) {
+                continue;
             }
 
             // 根据组件类型使用不同的坐标和判断逻辑
             if (child instanceof TechSlot) {
-                // TechSlot 使用转换后的坐标
-                if (child.isMouseOver(transformedMouseX, transformedMouseY)) {
-                    if (child.mouseClicked(transformedMouseX, transformedMouseY, button)) {
+                if (child.isMouseOver(coords.transformedX, coords.transformedY)) {
+                    if (child.mouseClicked(coords.transformedX, coords.transformedY, button)) {
+                        setFocused(child);
                         return true;
                     }
                 }
             } else {
-                // 其他 widget 使用原始坐标
                 if (child.isMouseOver(mouseX, mouseY)) {
-                    System.out.println("Widget " + child.getClass().getSimpleName() + " isMouseOver=true");
                     if (child.mouseClicked(mouseX, mouseY, button)) {
-                        System.out.println("Widget " + child.getClass().getSimpleName() + " handled click");
+                        setFocused(child);
                         return true;
                     }
                 }
             }
         }
 
-        // 如果没有子组件处理事件，调用父类方法以确保正常的事件处理流程
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        // 更新转换后的鼠标坐标
-        mouseHandleBgData.updateTransformedMouseCoords(mouseX, mouseY);
+        // 检查鼠标是否在窗口区域内
+        if (!isMouseInWindow(mouseX, mouseY)) {
+            return false;  // 鼠标不在窗口区域内，不处理释放事件
+        }
 
         // 重置拖拽状态
         if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
@@ -377,25 +570,32 @@ public abstract class ResearchContainerScreen extends Screen {
             dragTotal = 0;
         }
 
-        // 获取转换后的鼠标坐标
-        int transformedMouseX = mouseHandleBgData.getTransformedMouseX();
-        int transformedMouseY = mouseHandleBgData.getTransformedMouseY();
+        // 如果鼠标在配方书区域内，只处理配方书内部组件
+        if (isMouseInRecipeBook(mouseX, mouseY)) {
+            // 只让配方书内部的 IOpenRenderable 组件处理事件
+            for (var child : children()) {
+                if (child instanceof IOpenRenderable) {
+                    if (child.mouseReleased(mouseX, mouseY, button)) {
+                        return true;
+                    }
+                }
+            }
+            return false;  // 配方书区域内不处理槽位释放事件
+        }
 
-        // 将事件传递给子组件
+        var coords = updateAndGetTransformedCoords(mouseX, mouseY);
+
         for (var child : children()) {
-            // 如果是IOpenRenderable组件，只在配方书打开时才处理事件
-            if (child instanceof IOpenRenderable && !isOpenRecipeBook()) {
-                continue;  // 跳过此组件
+            if (shouldSkipChild(child)) {
+                continue;
             }
 
             // 根据组件类型使用不同的坐标
             if (child instanceof TechSlot) {
-                // TechSlot 使用转换后的坐标
-                if (child.mouseReleased(transformedMouseX, transformedMouseY, button)) {
+                if (child.mouseReleased(coords.transformedX, coords.transformedY, button)) {
                     return true;
                 }
             } else {
-                // 其他 widget 使用原始坐标
                 if (child.mouseReleased(mouseX, mouseY, button)) {
                     return true;
                 }
@@ -406,45 +606,13 @@ public abstract class ResearchContainerScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        // 先让子组件处理键盘事件
-        for (var child : children()) {
-            // 如果是IOpenRenderable组件，只在配方书打开时才处理事件
-            if (child instanceof IOpenRenderable && !isOpenRecipeBook()) {
-                continue;  // 跳过此组件
-            }
-
-            if (child.keyPressed(keyCode, scanCode, modifiers)) {
-                return true;
-            }
-        }
-
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        // 先让子组件处理字符输入事件
-        for (var child : children()) {
-            // 如果是IOpenRenderable组件，只在配方书打开时才处理事件
-            if (child instanceof IOpenRenderable && !isOpenRecipeBook()) {
-                continue;  // 跳过此组件
-            }
-
-            if (child.charTyped(codePoint, modifiers)) {
-                return true;
-            }
-        }
-
-        return super.charTyped(codePoint, modifiers);
-    }
-
-    @Override
     public void mouseMoved(double mouseX, double mouseY) {
         // 更新转换后的鼠标坐标
         mouseHandleBgData.updateTransformedMouseCoords(mouseX, mouseY);
         super.mouseMoved(mouseX, mouseY);
     }
+
+
 
     /**
      * @return 边框图片和整个大小
@@ -468,6 +636,11 @@ public abstract class ResearchContainerScreen extends Screen {
      */
     protected abstract Pair<Float,Float> getMaxOrMinScale();
 
+    /**
+     * 获取配方书区域
+     * @return
+     */
+    protected abstract BlitContext getRecipe();
 
     private void renderBg(GuiGraphics context,int x,int y){
         var blitContext = getBg();
@@ -530,22 +703,6 @@ public abstract class ResearchContainerScreen extends Screen {
         }
         pose.popPose();
         context.disableScissor();
-    }
-
-    /**
-     * 获取当前客户端focus的槽位
-     * @return 当前focus的槽位，如果没有则返回null
-     */
-    public TechSlot getFocusSlot() {
-        return this.focusSlot;
-    }
-
-    public void setFocusSlot(TechSlot focusSlot) {
-        this.focusSlot = focusSlot;
-    }
-
-    public Map<ResourceLocation, TechSlot> getSlots() {
-        return slots;
     }
 
     /**

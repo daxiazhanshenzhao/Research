@@ -7,17 +7,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.MinecraftForge;
-import org.research.Research;
 import org.research.api.event.custom.ChangeTechStageEvent;
 import org.research.api.init.TechInit;
 import org.research.api.recipe.IRecipe;
 import org.research.api.recipe.RecipeWrapper;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-
-import static org.research.api.tech.capability.TechTreeDataProvider.ID;
 
 public class TechInstance implements Comparable<TechInstance> {
 

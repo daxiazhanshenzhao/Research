@@ -6,9 +6,9 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 import org.research.api.util.BlitContext;
 import org.research.api.util.Texture;
-import org.research.gui.minecraft.ResearchScreen;
+import org.research.gui.minecraft.ResearchContainerScreen;
 
-public class OpenRecipeWidget extends AbstractButton {
+public class OpenRecipeWidget extends AbstractButton implements IOpenRenderable{
 
 
     private static final int offX = 110;
@@ -17,7 +17,7 @@ public class OpenRecipeWidget extends AbstractButton {
     private static final int width = 7;
     private static final int height = 13;
 
-    private ResearchScreen screen;
+    private ResearchContainerScreen screen;
 
     private static final BlitContext OPEN_UNFOCUSED = BlitContext.of(Texture.TEXTURE,263,7,7,13);
     private static final BlitContext OPEN_FOCUSED = BlitContext.of(Texture.TEXTURE, 253, 9, 7, 11);
@@ -26,7 +26,7 @@ public class OpenRecipeWidget extends AbstractButton {
     private static final BlitContext OFF_FOCUSED = BlitContext.of(Texture.TEXTURE, 264, 27, 7, 11);
 
 
-    public OpenRecipeWidget(int x, int y, ResearchScreen screen) {
+    public OpenRecipeWidget(int x, int y, ResearchContainerScreen screen) {
         super(x, y, width, height, Component.empty());
         this.screen = screen;
     }
@@ -79,5 +79,10 @@ public class OpenRecipeWidget extends AbstractButton {
     @Override
     protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
 
+    }
+
+    @Override
+    public int getZLevel() {
+        return 1700;
     }
 }

@@ -6,7 +6,6 @@ import org.research.api.init.TechInit;
 import org.research.api.recipe.RecipeWrapper;
 import org.research.api.tech.AbstractTech;
 import org.research.api.tech.TechBuilder;
-import org.research.tech.stage1.ATech;
 
 public class BTech extends AbstractTech {
     public BTech() {
