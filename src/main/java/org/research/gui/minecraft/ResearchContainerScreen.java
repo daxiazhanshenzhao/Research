@@ -16,6 +16,7 @@ import org.lwjgl.glfw.GLFW;
 import org.research.api.client.ClientResearchData;
 import org.research.api.gui.MouseHandleBgData;
 import org.research.api.init.PacketInit;
+import org.research.api.recipe.WightConnection;
 import org.research.api.tech.*;
 import org.research.api.tech.graphTree.Vec2i;
 import org.research.api.util.BlitContext;
@@ -94,7 +95,7 @@ public abstract class ResearchContainerScreen extends Screen {
     private boolean openRecipeBook = false;
     private static final BlitContext RECIPE_BG_OPEN = BlitContext.of(Texture.TEXTURE,55,47,146,213);
     private static final BlitContext RECIPE_BG_OFF = BlitContext.of(Texture.TEXTURE,9,46,35,213);
-
+    private WightConnection connecter;
 
 
     public ResearchContainerScreen(SyncData data) {
@@ -173,6 +174,11 @@ public abstract class ResearchContainerScreen extends Screen {
 
         addRecipePageWidgets();
 
+        // 从 ClientResearchData 获取 WightConnection 实例并设置 Screen 参数
+        this.connecter = ClientResearchData.getWightConnection();
+        this.connecter.setScreen(this);
+        // 初始化配方槽位的屏幕坐标
+        this.connecter.initializeScreen();
 
         // 对 renderables 进行排序，让 IOpenRenderable 组件根据 Z 层级排序
         sortRenderablesByZLevel();
@@ -211,7 +217,19 @@ public abstract class ResearchContainerScreen extends Screen {
         this.renderables.addAll(renderableList);
     }
 
+    public void updateRecipeWight(List<RecipeTechSlot> recipeSlots) {
+        //全部移除
+        for (var child : children()){
+            if (child instanceof RecipeTechSlot){
+                removeWidget(child);
+            }
+        }
+        //依次添加
+        for (var recipeSlot : recipeSlots){
+            addWidget(recipeSlot);
+        }
 
+    }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
@@ -233,7 +251,7 @@ public abstract class ResearchContainerScreen extends Screen {
     }
 
     private void renderRecipeSlots(GuiGraphics guiGraphics) {
-
+        connecter.render(guiGraphics);
 
     }
 
@@ -728,6 +746,8 @@ public abstract class ResearchContainerScreen extends Screen {
         if (toServer){
             PacketInit.sendToServer(new ClientSetFocusPacket(techId));
         }
+
+        connecter.setRecipe(focusSlot.getTechInstance().getRecipe());
     }
 
     public int getOpenTicks() {

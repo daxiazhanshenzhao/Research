@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.crafting.Recipe;
 import org.lwjgl.glfw.GLFW;
 import org.research.Research;
 import org.research.api.recipe.IRecipe;
@@ -172,6 +173,10 @@ public class TechSlot extends AbstractButton {
 
         // 返回 true 表示事件已处理，不再继续传播
         return true;
+    }
+
+    public Recipe<?> getRecipe(){
+        return IRecipe.getClientRecipe(tech.getRecipe(), Minecraft.getInstance());
     }
 
     /**

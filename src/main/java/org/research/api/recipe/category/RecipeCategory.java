@@ -1,11 +1,14 @@
 package org.research.api.recipe.category;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeType;
 import org.research.Research;
 
 import javax.annotation.Nullable;
@@ -30,11 +33,17 @@ public abstract class RecipeCategory<T> {
     public static final ResourceLocation Default_Slot_Background = Research.asResource("textures/gui/default_slot_background.png");
 
 
-    @Nullable
+    @Getter
     protected RecipeBuilder recipeBuilder;
 
-    @Nullable
+    @Setter
     protected T currentRecipe;
+
+    public void init(T recipe){
+        this.recipeBuilder = new RecipeBuilder();
+        this.currentRecipe = recipe;
+        setRecipe(recipeBuilder,currentRecipe);
+    }
 
     /**
      * 获取背景纹理资源位置
@@ -43,37 +52,19 @@ public abstract class RecipeCategory<T> {
     protected abstract ResourceLocation getBackGround();
 
     /**
-     * 使用 RecipeBuilder 配置配方槽位
-     *
-     * 示例：
-     * <pre>
-     * // 添加输入槽位
-     * for (int i = 0; i < recipe.getIngredients().size(); i++) {
-     *     builder.addSlot(10 + i * 18, 10, RecipeIngredientRole.INPUT)
-     *            .addIngredients(recipe.getIngredients().get(i))
-     *            .build();
-     * }
-     * // 添加输出槽位
-     * builder.addSlot(90, 10, RecipeIngredientRole.OUTPUT)
-     *        .addItems(List.of(recipe.getResultItem()))
-     *        .build();
-     * </pre>
-     *
-     * @param builder RecipeBuilder 实例
-     * @param recipe 配方实例
+     * 每次打开都会调用
+     * @param recipe
      */
     protected abstract void setRecipe(RecipeBuilder builder, T recipe);
 
-    /**
-     * 初始化配方，创建 RecipeBuilder 并调用 setRecipe()
-     *
-     * @param recipe 要显示的配方
-     */
-    public void init(T recipe) {
+    public void setRecipe(T recipe){
         this.currentRecipe = recipe;
-        this.recipeBuilder = new RecipeBuilder();
-        setRecipe(recipeBuilder, recipe);
+        setRecipe(this.recipeBuilder, recipe);
     }
+
+    public abstract RecipeType<?> getRecipeType();
+
+
 
     /**
      * 渲染配方界面
@@ -133,20 +124,8 @@ public abstract class RecipeCategory<T> {
         }
     }
 
-    /**
-     * 获取当前配方
-     */
-    @Nullable
-    public T getCurrentRecipe() {
-        return currentRecipe;
-    }
 
-    /**
-     * 获取配方构建器
-     */
-    @Nullable
-    public RecipeBuilder getRecipeBuilder() {
-        return recipeBuilder;
-    }
+
+
 
 }

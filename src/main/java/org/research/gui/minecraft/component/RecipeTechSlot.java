@@ -1,6 +1,7 @@
 package org.research.gui.minecraft.component;
 
 import mezz.jei.api.recipe.IRecipeManager;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -25,8 +26,10 @@ public class RecipeTechSlot extends AbstractButton implements IOpenRenderable{
         this.screen = screen;
     }
 
-
-
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    }
 
     @Override
     public void onPress() {

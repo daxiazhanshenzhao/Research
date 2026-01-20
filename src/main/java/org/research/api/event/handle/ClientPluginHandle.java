@@ -12,6 +12,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.research.Research;
 import org.research.api.client.ClientResearchData;
+import org.research.api.recipe.category.CatalystsRegistration;
 import org.research.api.recipe.helper.ResearchPlugin;
 import org.research.api.util.ResearchPluginFinder;
 
@@ -41,14 +42,13 @@ public class ClientPluginHandle {
     @SubscribeEvent
     public static void onTagsUpdated(TagsUpdatedEvent event) {
 
-
-            List<ResearchPlugin> plugins =  ResearchPluginFinder.getModPlugins();
-
-            for (ResearchPlugin plugin : plugins) {
-                ClientResearchData.recipePluginData.add(plugin);
-                Research.LOGGER.info("正在加载来自模组 {} 的研究配方插件 {}", plugin.getPluginId(), plugin.getClass().getName());
-            }
-
+        List<ResearchPlugin> plugins =  ResearchPluginFinder.getModPlugins();
+        var registration = ClientResearchData.getRecipeCategories();
+        for (ResearchPlugin plugin : plugins) {
+            plugin.registerRecipeCategories(registration);
+            ClientResearchData.recipePluginData.add(plugin);
+            Research.LOGGER.info("正在加载来自模组 {} 的研究配方插件 {}", plugin.getPluginId(), plugin.getClass().getName());
+        }
     }
 
 

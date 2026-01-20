@@ -2,8 +2,13 @@ package org.research.api.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.crafting.Recipe;
 import org.research.api.gui.MouseHandleBgData;
 import org.research.api.init.PacketInit;
+import org.research.api.recipe.WightConnection;
+import org.research.api.recipe.category.CatalystsRegistration;
+import org.research.api.recipe.category.EmptyCategory;
+import org.research.api.recipe.category.RecipeCategory;
 import org.research.api.recipe.helper.EmptyResearchPlugin;
 import org.research.api.recipe.helper.ResearchPlugin;
 import org.research.api.tech.SyncData;
@@ -48,13 +53,28 @@ public class ClientResearchData {
     public static final ResearchPlugin emptyRecipeData = new EmptyResearchPlugin();
 
     public static final List<ResearchPlugin> getRecipePluginData() {
-        LocalPlayer localPlayer = Minecraft.getInstance().player;
         if (recipePluginData.isEmpty()) {
             return List.of(emptyRecipeData);
         }else {
             return recipePluginData;
         }
-
     }
 
+    public static final CatalystsRegistration recipeCategories = new CatalystsRegistration();
+    public static final CatalystsRegistration getRecipeCategories() {
+        if (recipeCategories == null) {
+            return new CatalystsRegistration();
+        }else {
+            return recipeCategories;
+        }
+    }
+
+
+
+    //wightConnection
+    public static final WightConnection wightConnection = new WightConnection();
+
+    public static WightConnection getWightConnection() {
+        return wightConnection;
+    }
 }
