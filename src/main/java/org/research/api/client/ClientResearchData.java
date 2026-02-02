@@ -1,14 +1,14 @@
 package org.research.api.client;
 
+import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.world.item.crafting.Recipe;
+import org.research.api.gui.ClientScreenManager;
+import org.research.api.gui.TechSlotData;
 import org.research.api.gui.MouseHandleBgData;
 import org.research.api.init.PacketInit;
 import org.research.api.recipe.WightConnection;
 import org.research.api.recipe.category.CatalystsRegistration;
-import org.research.api.recipe.category.EmptyCategory;
-import org.research.api.recipe.category.RecipeCategory;
 import org.research.api.recipe.helper.EmptyResearchPlugin;
 import org.research.api.recipe.helper.ResearchPlugin;
 import org.research.api.tech.SyncData;
@@ -17,6 +17,7 @@ import org.research.network.research.SendPacketPacket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 
 public class ClientResearchData {
@@ -35,7 +36,7 @@ public class ClientResearchData {
         PacketInit.sendToServer(new SendPacketPacket());
     }
 
-
+    //GUI============================
 
     //mouseHandleBgData
     public static final HashMap<Integer, MouseHandleBgData> mouseData = new HashMap<>();
@@ -45,10 +46,10 @@ public class ClientResearchData {
         LocalPlayer localPlayer = Minecraft.getInstance().player;
         return mouseData.getOrDefault(localPlayer.getId(),emptyMouseData);
     }
+    //tech slots cache
 
 
-
-    //recipeManager
+    //recipeManager================================
     public static final List<ResearchPlugin> recipePluginData = new ArrayList<>();
     public static final ResearchPlugin emptyRecipeData = new EmptyResearchPlugin();
 
@@ -60,21 +61,20 @@ public class ClientResearchData {
         }
     }
 
+    @Getter
     public static final CatalystsRegistration recipeCategories = new CatalystsRegistration();
-    public static final CatalystsRegistration getRecipeCategories() {
-        if (recipeCategories == null) {
-            return new CatalystsRegistration();
-        }else {
-            return recipeCategories;
+
+    private static ClientScreenManager manager;
+
+    public static Optional<ClientScreenManager> getManager() {
+        if (manager == null) {
+            try {
+                manager = new ClientScreenManager();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return Optional.empty();
+            }
         }
-    }
-
-
-
-    //wightConnection
-    public static final WightConnection wightConnection = new WightConnection();
-
-    public static WightConnection getWightConnection() {
-        return wightConnection;
+        return Optional.of(manager);
     }
 }

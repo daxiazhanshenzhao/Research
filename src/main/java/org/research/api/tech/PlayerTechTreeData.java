@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import org.research.api.init.TechInit;
 import org.research.api.tech.capability.ITechTreeCapability;
-import org.research.api.tech.graphTree.Vec2i;
+import org.research.api.util.Vec2i;
 
 import java.util.*;
 

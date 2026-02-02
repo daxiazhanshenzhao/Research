@@ -1,9 +1,13 @@
 package org.research.api.recipe;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeType;
+import org.research.Research;
 import org.research.api.client.ClientResearchData;
+import org.research.api.recipe.category.RecipeBuilder;
 import org.research.api.recipe.category.RecipeCategory;
 import org.research.api.recipe.category.SlotBuilder;
 import org.research.api.util.BlitContext;
@@ -68,6 +72,13 @@ public class WightConnection {
 
         var categories = ClientResearchData.getRecipeCategories().getRecipeCategories();
         for (RecipeCategory<?> category : categories) {
+            // 检查 RecipeBuilder 是否已初始化
+            if (category.getRecipeBuilder() == null) {
+                // RecipeBuilder 未初始化，跳过这个类别
+                // 槽位将在第一次调用 setRecipe() 时创建
+                continue;
+            }
+
             List<RecipeTechSlot> slots = createSlotsForCategory(category);
             slotCache.put(category.getRecipeType(), slots);
         }
@@ -79,7 +90,13 @@ public class WightConnection {
      * @return 槽位列表（坐标为 0,0）
      */
     private List<RecipeTechSlot> createSlotsForCategory(RecipeCategory<?> category) {
-        List<SlotBuilder> slotBuilders = category.getRecipeBuilder().getSlots();
+        RecipeBuilder recipeBuilder = category.getRecipeBuilder();
+        if (recipeBuilder == null) {
+            // RecipeBuilder 未初始化，返回空列表
+            return new ArrayList<>();
+        }
+
+        List<SlotBuilder> slotBuilders = recipeBuilder.getSlots();
         List<RecipeTechSlot> slots = new ArrayList<>();
 
         for (SlotBuilder slotBuilder : slotBuilders) {
@@ -102,12 +119,16 @@ public class WightConnection {
      */
     public void initializeScreen() {
         if (screen == null) {
+            Research.LOGGER.warn("initializeScreen() 跳过：screen 为 null");
             return; // Screen 未设置，跳过初始化
         }
 
         if (screenInitialized) {
+            Research.LOGGER.info("initializeScreen() 跳过：已经初始化过");
             return; // 避免重复初始化
         }
+
+        Research.LOGGER.info("开始初始化 Screen 坐标...");
 
         // 计算配方书区域的屏幕坐标
         var recipeContext = BlitContext.of(null, 8, 21, 124, 221);
@@ -116,13 +137,27 @@ public class WightConnection {
         int recipeBookX = guiLeft + recipeContext.u();
         int recipeBookY = guiTop + recipeContext.v();
 
+        Research.LOGGER.info("配方书区域坐标：guiLeft={}, guiTop={}, recipeBookX={}, recipeBookY={}",
+            guiLeft, guiTop, recipeBookX, recipeBookY);
+
         // 更新所有缓存槽位的坐标
         var categories = ClientResearchData.getRecipeCategories().getRecipeCategories();
+        int totalSlots = 0;
         for (RecipeCategory<?> category : categories) {
             List<RecipeTechSlot> slots = slotCache.get(category.getRecipeType());
-            if (slots == null) continue;
+            if (slots == null) {
+                Research.LOGGER.debug("配方类型 {} 的槽位缓存为空", category.getRecipeType());
+                continue;
 
-            List<SlotBuilder> slotBuilders = category.getRecipeBuilder().getSlots();
+            }
+
+            RecipeBuilder recipeBuilder = category.getRecipeBuilder();
+            if (recipeBuilder == null) {
+                Research.LOGGER.warn("配方类型 {} 的 RecipeBuilder 为 null", category.getRecipeType());
+                continue;
+            }
+
+            List<SlotBuilder> slotBuilders = recipeBuilder.getSlots();
             for (int i = 0; i < slots.size() && i < slotBuilders.size(); i++) {
                 RecipeTechSlot slot = slots.get(i);
                 SlotBuilder builder = slotBuilders.get(i);
@@ -131,22 +166,97 @@ public class WightConnection {
                 int screenX = recipeBookX + builder.getX();
                 int screenY = recipeBookY + builder.getY();
                 slot.setPosition(screenX, screenY);
+                totalSlots++;
             }
         }
 
+        Research.LOGGER.info("Screen 坐标初始化完成，共更新 {} 个槽位", totalSlots);
         screenInitialized = true;
+    }
+
+    /**
+     * 刷新当前配方的槽位显示
+     * 用于 Screen 重新打开时恢复上次的配方显示
+     */
+    public void refreshCurrentRecipe() {
+        if (currentCategory != null) {
+            Research.LOGGER.info("刷新当前配方显示，配方类型：{}", currentCategory.getRecipeType());
+            updateWight();
+        } else {
+            Research.LOGGER.warn("无法刷新配方显示：currentCategory 为 null");
+        }
     }
 
     /**
      * 切换显示的配方
      * 直接从缓存中获取预创建的槽位，无需重复创建
+     * 如果缓存中不存在，则动态创建槽位
      */
     public void setRecipe(RecipeWrapper recipeWrapper) {
         var categories = ClientResearchData.getRecipeCategories().getRecipeCategories();
         for (RecipeCategory<?> category : categories) {
             if (category.getRecipeType() == recipeWrapper.type()) {
                 this.currentCategory = category;
+
+                // 检查缓存中是否已有该配方类型的槽位
+                if (!slotCache.containsKey(category.getRecipeType()) || slotCache.get(category.getRecipeType()).isEmpty()) {
+                    // 缓存中没有，需要动态创建
+                    // 注意：这里需要先初始化 RecipeBuilder
+                    if (category.getRecipeBuilder() == null && screen != null) {
+                        // RecipeBuilder 未初始化，需要获取具体配方并初始化
+                        // 从客户端获取配方实例
+                        var recipe = IRecipe.getClientRecipe(recipeWrapper, net.minecraft.client.Minecraft.getInstance());
+                        if (recipe != null) {
+                            // 使用原始类型调用，因为我们无法在运行时确定泛型类型
+                            initCategoryWithRecipe(category, recipe);
+
+                            // 创建槽位
+                            List<RecipeTechSlot> slots = createSlotsForCategory(category);
+                            slotCache.put(category.getRecipeType(), slots);
+
+                            // 如果 Screen 已初始化，立即更新坐标
+                            if (screenInitialized) {
+                                updateSlotPositions(category.getRecipeType());
+                            }
+                        }
+                    }
+                }
+
                 updateWight();
+                break;
+            }
+        }
+    }
+
+    /**
+     * 更新指定配方类型的槽位坐标
+     */
+    private void updateSlotPositions(RecipeType<?> recipeType) {
+        if (screen == null) return;
+
+        List<RecipeTechSlot> slots = slotCache.get(recipeType);
+        if (slots == null || slots.isEmpty()) return;
+
+        var categories = ClientResearchData.getRecipeCategories().getRecipeCategories();
+        for (RecipeCategory<?> category : categories) {
+            if (category.getRecipeType() == recipeType && category.getRecipeBuilder() != null) {
+                List<SlotBuilder> slotBuilders = category.getRecipeBuilder().getSlots();
+
+                // 计算配方书区域的屏幕坐标
+                var recipeContext = BlitContext.of(null, 8, 21, 124, 221);
+                int guiLeft = (screen.width - 256) / 2;
+                int guiTop = (screen.height - 256) / 2;
+                int recipeBookX = guiLeft + recipeContext.u();
+                int recipeBookY = guiTop + recipeContext.v();
+
+                for (int i = 0; i < slots.size() && i < slotBuilders.size(); i++) {
+                    RecipeTechSlot slot = slots.get(i);
+                    SlotBuilder builder = slotBuilders.get(i);
+
+                    int screenX = recipeBookX + builder.getX();
+                    int screenY = recipeBookY + builder.getY();
+                    slot.setPosition(screenX, screenY);
+                }
                 break;
             }
         }
@@ -157,21 +267,19 @@ public class WightConnection {
      * 从缓存中获取槽位，避免重复创建
      */
     private void updateWight() {
-        if (screen == null || currentCategory == null) {
-            return;
-        }
 
-        // 从缓存中获取预创建的槽位
-        List<RecipeTechSlot> recipeSlots = slotCache.get(currentCategory.getRecipeType());
-        if (recipeSlots == null) {
-            recipeSlots = new ArrayList<>();
-        }
-
-        // 更新屏幕上的配方槽位
-        screen.updateRecipeWight(recipeSlots);
     }
 
     public void render(GuiGraphics guiGraphics) {
         // 渲染逻辑（如果需要）
+    }
+
+    /**
+     * 使用原始类型安全地初始化配方类别
+     * 抑制未检查的警告，因为我们通过 RecipeType 确保了类型匹配
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private void initCategoryWithRecipe(RecipeCategory category, net.minecraft.world.item.crafting.Recipe recipe) {
+        category.init(recipe);
     }
 }

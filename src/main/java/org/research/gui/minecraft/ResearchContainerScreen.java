@@ -4,10 +4,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.datafixers.util.Pair;
 import lombok.Getter;
 import lombok.Setter;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.advancements.AdvancementWidget;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
@@ -18,7 +16,7 @@ import org.research.api.gui.MouseHandleBgData;
 import org.research.api.init.PacketInit;
 import org.research.api.recipe.WightConnection;
 import org.research.api.tech.*;
-import org.research.api.tech.graphTree.Vec2i;
+import org.research.api.util.Vec2i;
 import org.research.api.util.BlitContext;
 import org.research.api.util.Texture;
 import org.research.gui.minecraft.component.*;
@@ -174,11 +172,16 @@ public abstract class ResearchContainerScreen extends Screen {
 
         addRecipePageWidgets();
 
-        // 从 ClientResearchData 获取 WightConnection 实例并设置 Screen 参数
-        this.connecter = ClientResearchData.getWightConnection();
-        this.connecter.setScreen(this);
-        // 初始化配方槽位的屏幕坐标
-        this.connecter.initializeScreen();
+//        // 从 ClientResearchData 获取 WightConnection 实例并设置 Screen 参数
+//        this.connecter = ClientResearchData.getWightConnection();
+//        this.connecter.setScreen(this);
+//        // 初始化配方槽位的屏幕坐标
+//        this.connecter.initializeScreen();
+//
+//        // 如果当前有选中的槽位，自动加载并显示该配方
+//        if (focusSlot != null && focusSlot != TechSlot.EMPTY) {
+//            connecter.setRecipe(focusSlot.getTechInstance().getRecipe());
+//        }
 
         // 对 renderables 进行排序，让 IOpenRenderable 组件根据 Z 层级排序
         sortRenderablesByZLevel();
@@ -808,11 +811,5 @@ public abstract class ResearchContainerScreen extends Screen {
         updateSlotsData();
     }
 
-    public int getGuiLeft() {
-        return guiLeft;
-    }
 
-    public int getGuiTop() {
-        return guiTop;
-    }
 }

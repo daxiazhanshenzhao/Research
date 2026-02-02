@@ -1,11 +1,8 @@
-package org.research.api.tech.graphTree;
+package org.research.api.util;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.ResourceLocation;
 import org.joml.Vector2i;
-import org.research.api.tech.PlayerTechTreeData;
-import org.research.api.tech.TechInstance;
 
 
 public class Vec2i extends Vector2i {

@@ -29,26 +29,17 @@ public class ClientPluginHandle {
     private static boolean recipesLoaded = false;
     private static RecipeManager cachedRecipeManager = null;
 
-    /**
-     * 配方加载完毕的最佳时机：TagsUpdatedEvent
-     *
-     * 这个事件在以下情况触发：
-     * 1. 玩家登录世界时（客户端接收服务端数据）
-     * 2. /reload 命令后（重新加载数据包）
-     * 3. 资源包更新后
-     *
-     * 此时配方已经从服务端同步到客户端，可以安全访问 RecipeManager
-     */
+
     @SubscribeEvent
     public static void onTagsUpdated(TagsUpdatedEvent event) {
 
-        List<ResearchPlugin> plugins =  ResearchPluginFinder.getModPlugins();
-        var registration = ClientResearchData.getRecipeCategories();
-        for (ResearchPlugin plugin : plugins) {
-            plugin.registerRecipeCategories(registration);
-            ClientResearchData.recipePluginData.add(plugin);
-            Research.LOGGER.info("正在加载来自模组 {} 的研究配方插件 {}", plugin.getPluginId(), plugin.getClass().getName());
-        }
+//        List<ResearchPlugin> plugins =  ResearchPluginFinder.getModPlugins();
+//        var registration = ClientResearchData.getRecipeCategories();
+//        for (ResearchPlugin plugin : plugins) {
+//            plugin.registerRecipeCategories(registration);
+//            ClientResearchData.recipePluginData.add(plugin);
+//            Research.LOGGER.info("正在加载来自模组 {} 的研究配方插件 {}", plugin.getPluginId(), plugin.getClass().getName());
+//        }
     }
 
 

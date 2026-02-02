@@ -9,7 +9,7 @@ import org.research.api.tech.AbstractTech;
 import org.research.api.tech.SyncData;
 import org.research.api.tech.TechInstance;
 import org.research.api.tech.TechState;
-import org.research.api.tech.graphTree.Vec2i;
+import org.research.api.util.Vec2i;
 
 import java.util.List;
 import java.util.Map;

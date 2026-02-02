@@ -24,6 +24,7 @@ public class RecipeTechSlot extends AbstractButton implements IOpenRenderable{
     public RecipeTechSlot(int x, int y, List<ItemStack> item, ResearchContainerScreen screen) {
         super(x, y, Width, Height, Component.empty());
         this.screen = screen;
+        this.items = item; // ✅ 修复：正确赋值 items 字段
     }
 
     @Override
