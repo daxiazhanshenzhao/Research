@@ -26,9 +26,11 @@ public class TechSlotData {
     // 内部可变列表：复用实例，避免频繁创建对象
     private final List<TechSlot> cache = new ArrayList<>();
 
-
     // 不可变快照：用于外界安全读取
     private List<TechSlot> snapshot = Collections.emptyList();
+    private TechSlot focusTechSlot = TechSlot.EMPTY;
+    // 缓存的哈希值：用于高频调用时快速判断数据是否变化
+    private int cachedDataHash = 0;
 
     /**
      * 设置缓存的 TechSlot 列表（复用内部 list，性能最优）
@@ -72,6 +74,43 @@ public class TechSlotData {
             cache.clear();
             markDirty();
         }
+        // 清空时重置哈希值
+        cachedDataHash = 0;
+    }
+
+    /**
+     * 检查数据哈希值是否匹配（用于快速判断数据是否变化）
+     *
+     * @param currentHash 当前数据的哈希值
+     * @return true 表示哈希值匹配，数据未变化；false 表示需要更新
+     */
+    public boolean isHashMatched(int currentHash) {
+        return cachedDataHash != 0 && cachedDataHash == currentHash;
+    }
+
+    /**
+     * 更新缓存的哈希值
+     *
+     * @param newHash 新的哈希值
+     */
+    public void updateHash(int newHash) {
+        this.cachedDataHash = newHash;
+    }
+
+    /**
+     * 获取当前缓存的哈希值
+     *
+     * @return 缓存的哈希值
+     */
+    public int getCachedHash() {
+        return cachedDataHash;
+    }
+
+    /**
+     * 重置哈希值（用于失效缓存）
+     */
+    public void resetHash() {
+        this.cachedDataHash = 0;
     }
 
     /**
@@ -107,6 +146,13 @@ public class TechSlotData {
         }
     }
 
+    public void clearFocus(){
+
+    }
+
+    public void setFocusTechSlot(TechSlot techSlot) {
+
+    }
     /**
      * 获取 TechSlot 数量
      */
@@ -121,36 +167,6 @@ public class TechSlotData {
         return cache.isEmpty();
     }
 
-    /**
-     * 初始化所有 TechSlot 的位置
-     * 基于 syncData 中的坐标和 GUI 的偏移量
-     *
-     * @param syncData 同步数据，包含 TechSlot 的坐标信息
-     * @param guiLeftOffset GUI 左偏移量
-     * @param guiTopOffset GUI 顶部偏移量
-     */
-    public synchronized void initializePositions(SyncData syncData, int guiLeftOffset, int guiTopOffset) {
-        if (syncData == null || isEmpty()) {
-            return;
-        }
-
-        Map<ResourceLocation, Vec2i> vecMap = syncData.getVecMap();
-        if (vecMap == null || vecMap.isEmpty()) {
-            return;
-        }
-
-        // 遍历所有 TechSlot，根据 syncData 的坐标初始化位置
-        for (var techSlot : cache) {
-            var techId = techSlot.getTechInstance().getIdentifier();
-            var vec = vecMap.get(techId);
-            if (vec != null) {
-                // 计算新位置：guiOffset + syncData 的坐标
-                int newX = guiLeftOffset + vec.x();
-                int newY = guiTopOffset + vec.y();
-                techSlot.setPosition(newX, newY);
-            }
-        }
-    }
 
     /**
      * 简化版本的 initializePositions，直接使用 vecMap 中的值

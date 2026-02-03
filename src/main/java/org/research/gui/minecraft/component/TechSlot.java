@@ -32,6 +32,7 @@ public class TechSlot extends AbstractButton {
     public static final TechSlot EMPTY = new TechSlot(0,0,TechInstance.EMPTY);
 
     private TechInstance tech;
+    private boolean focused = false;
 
     /**
      * 获取科技实例

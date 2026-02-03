@@ -55,7 +55,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
         this.techMap = techMap;
         this.vecMap = vecMap;
         this.stage = stage;
-
+        // 初始化哈希值，使得下一次 tick 能正确判断数据是否变化
+        this.lastTechMapHash = calculateTechMapHash();
     }
 
     @Override
@@ -207,6 +208,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
         instance.setFocused(true);
         player.sendSystemMessage(Component.literal("Focused on tech: " + techId.toString()));
+
     }
 
     private void clearWaiting() {
@@ -224,6 +226,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                 techInstance.setFocused(false);
             }
         }
+
+
     }
 
     @Override
@@ -444,6 +448,11 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
      * 通过计算 techMap 的哈希值来判断是否需要同步，避免不必要的网络传输和对象创建
      */
     private void autoSync(){
+        // 如果 player 未设置，则无法同步数据，直接返回
+        if (player == null) {
+            return;
+        }
+
         // 计算当前 techMap 的哈希值
         int currentHash = calculateTechMapHash();
 
@@ -561,6 +570,10 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
     public void setPlayer(ServerPlayer player) {
         this.player = player;
+        // 当设置 player 时，立即同步数据到客户端
+        // 清除缓存，强制重新创建 SyncData
+        cachedSyncData = null;
+        syncToClient();
     }
 
     public ServerPlayer getPlayer() {

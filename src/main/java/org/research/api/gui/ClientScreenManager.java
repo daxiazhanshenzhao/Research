@@ -8,12 +8,12 @@ import org.research.api.config.ClientConfig;
 import org.research.api.gui.wrapper.*;
 import org.research.api.init.PacketInit;
 import org.research.api.tech.SyncData;
-import org.research.api.tech.TechInstance;
 import org.research.api.util.BlitContextV2;
 import org.research.api.util.UVContext;
 import org.research.gui.minecraft.component.TechSlot;
 import org.research.network.research.ClientSetFocusPacket;
 
+import javax.annotation.Nullable;
 import java.util.Optional;
 
 @Getter
@@ -30,8 +30,8 @@ public class ClientScreenManager {
 
     private ScreenData screenData = new ScreenData();
     private MouseData mouseData = new MouseData();
-    private TechSlotData techSlotData;
-    private SyncData lastSyncData;
+    private TechSlotData techSlotData = new TechSlotData();
+    private @Nullable SyncData syncData;
     private Optional<RecipeTechData> optRecipeTechData = Optional.empty();
 
 
@@ -331,9 +331,6 @@ public class ClientScreenManager {
         }
     }
 
-    public boolean translate(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        return true;
-    }
 
     /**
      * 应用变换到PoseStack
@@ -350,50 +347,91 @@ public class ClientScreenManager {
         poseStackData.translate(-cx, -cy, 0);
     }
 
-    /**
-     * 获取技能槽位数据，支持自动重新初始化和热更新
-     *
-     * 热更新逻辑：
-     * - 每帧都强制更新所有 TechSlot 的 TechInstance，确保 focus 等状态实时同步
-     * - 首次创建时初始化所有槽位
-     */
+
     public TechSlotData getTechSlotData() {
-        var currentSyncData = ClientResearchData.getSyncData();
+        // 每次都重新获取 syncData，确保使用最新的数据（关键修复：避免使用过时的缓存对象）
+        syncData = ClientResearchData.getSyncData();
 
-        // 首次创建或需要完全重建
-        if (techSlotData == null || techSlotData.isEmpty()) {
-            techSlotData = new TechSlotData();
-            lastSyncData = currentSyncData;
-
-            var techs = currentSyncData.getCacheds();
-            var vecs = currentSyncData.getVecMap();
-            for (TechInstance tech : techs.values()) {
-                var pos = vecs.get(tech.getIdentifier());
-                if (pos != null) {
-                    techSlotData.addTechSlot(new TechSlot(pos.x(), pos.y(), tech));
-                }
-            }
-        } else {
-            // 热更新：每帧强制更新所有 TechSlot 的 TechInstance
-            // 这确保了 focus 等状态能实时反映到界面上
-            var techs = currentSyncData.getCacheds();
-            var existingSlots = new java.util.ArrayList<>(techSlotData.getCachedTechSlots());
-
-            // 强制更新所有槽位的 TechInstance
-            for (var slot : existingSlots) {
-                var techId = slot.getTechInstance().getIdentifier();
-                var updatedTech = techs.get(techId);
-                if (updatedTech != null) {
-                    // 直接更新，不做 equals 检查（因为 TechInstance.equals 只比较 tech 字段）
-                    slot.updateInstance(updatedTech);
-                }
-            }
-
-            lastSyncData = currentSyncData;
+        // 验证 syncData 是否有效（防止空数据导致的问题）
+        if (syncData.getPlayerId() == -999) {
+            return techSlotData; // 返回空数据
         }
+
+        // 第一层快速检查：已有数据且哈希未变 -> 直接返回（99% 的情况）
+        if (!techSlotData.isEmpty()) {
+            // 使用 TechSlotData 的哈希验证方法，快速判断数据是否变化
+            int currentHash = syncData.getDataHash();
+            if (techSlotData.isHashMatched(currentHash)) {
+                return techSlotData; // 快速返回，零开销
+            }
+
+            // 哈希值不匹配，需要更新数据（只更新 TechInstance，保留坐标）
+            techSlotData.updateHash(currentHash);
+            updateTechSlots(syncData);
+            return techSlotData;
+        }
+
+        // 第二层检查：首次初始化或数据为空，需要完整构建槽位数据
+        int currentHash = syncData.getDataHash();
+        techSlotData.updateHash(currentHash);
+        rebuildTechSlots(syncData);
 
         return techSlotData;
     }
+
+    /**
+     * 更新技能槽位数据（只更新 TechInstance，保留坐标）
+     *
+     * 用于数据同步时增量更新，避免丢失已转换的屏幕坐标
+     * 性能优化：不创建新对象，只更新现有对象的数据
+     */
+    private void updateTechSlots(SyncData data) {
+        var techs = data.getCacheds();
+        var cachedSlots = techSlotData.getCachedTechSlots();
+
+        // 遍历所有现有的 TechSlot，更新对应的 TechInstance
+        for (var slot : cachedSlots) {
+            var identifier = slot.getTechInstance().getIdentifier();
+            var newTechInstance = techs.get(identifier);
+
+            if (newTechInstance != null) {
+                // 只更新 TechInstance 数据，保留 TechSlot 的坐标信息
+                slot.updateInstance(newTechInstance);
+            }
+        }
+    }
+
+    /**
+     * 重建技能槽位数据（完整重建，用于首次初始化）
+     *
+     * 优化点：
+     * - 使用 setCachedTechSlots 批量设置，避免多次触发脏标记
+     * - 预分配 ArrayList 容量，减少扩容开销
+     * - 直接遍历 Map.entrySet()，减少重复查找
+     */
+    private void rebuildTechSlots(SyncData data) {
+        var techs = data.getCacheds();
+        var vecs = data.getVecMap();
+
+        // 预分配容量，避免 ArrayList 自动扩容（性能优化）
+        var newSlots = new java.util.ArrayList<TechSlot>(techs.size());
+
+        // 直接遍历 techMap，减少重复查找
+        for (var entry : techs.entrySet()) {
+            var identifier = entry.getKey();
+            var tech = entry.getValue();
+            var pos = vecs.get(identifier);
+
+            if (pos != null) {
+                newSlots.add(new TechSlot(pos.x(), pos.y(), tech));
+            }
+        }
+
+        // 批量设置，只触发一次脏标记（比多次 addTechSlot 快很多）
+        techSlotData.setCachedTechSlots(newSlots);
+    }
+
+
 
     /**
      * 重置所有状态数据
@@ -406,10 +444,25 @@ public class ClientScreenManager {
         mouseData.setDragTotal(0d);
         mouseData.setCanDrag(false);
 
-
         screenData.setOpenRecipe(false);
         screenData.setGuiLeft(0);
         screenData.setGuiTop(0);
+
+        // 清理缓存数据，防止内存泄漏
+        invalidateCache();
+    }
+
+    /**
+     * 失效缓存数据（用于强制刷新或重置）
+     *
+     * 使用场景：
+     * - 切换玩家
+     * - 重置科技树
+     * - 服务端数据完全重建
+     */
+    public void invalidateCache() {
+        syncData = null;
+        techSlotData.clearTechSlots(); // clearTechSlots 内部会自动调用 resetHash()
     }
 
     /**

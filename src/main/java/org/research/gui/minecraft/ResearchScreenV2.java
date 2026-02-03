@@ -33,6 +33,11 @@ public class ResearchScreenV2 extends Screen {
         resize();
     }
 
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
     private void resize(){
         ClientResearchData.getManager().ifPresent(manager -> {
             // 获取窗口配置信息
