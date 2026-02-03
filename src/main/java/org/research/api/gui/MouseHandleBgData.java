@@ -7,6 +7,7 @@ import org.joml.Matrix4f;
  * 处理鼠标坐标变换的数据类
  * 封装了所有与矩阵变换相关的计算逻辑，避免在Screen类中直接处理坐标转换
  */
+@Deprecated
 public class MouseHandleBgData {
 
     public static final MouseHandleBgData EMPTY = new MouseHandleBgData();

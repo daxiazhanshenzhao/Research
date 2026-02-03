@@ -7,9 +7,10 @@ import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import org.research.api.client.ClientResearchData;
 import org.research.api.gui.ClientScreenManager;
-import org.research.api.gui.PoseStackData;
-import org.research.api.gui.ScreenData;
+import org.research.api.gui.wrapper.PoseStackData;
+import org.research.api.gui.wrapper.ScreenData;
 import org.research.api.util.InsideContext;
+import org.research.gui.minecraft.component.TechSlot;
 
 public class ResearchScreenV2 extends Screen {
 
@@ -51,12 +52,20 @@ public class ResearchScreenV2 extends Screen {
             screenData.setInsideX(guiLeft + insideContext.u());
             screenData.setInsideY(guiTop + insideContext.v());
 
+            //初始化所有techslot的位置
+            var techSlotData = manager.getTechSlotData();
+            if (techSlotData != null && !techSlotData.isEmpty()) {
+                var syncData = ClientResearchData.getSyncData();
+                techSlotData.initializePositionsWithVecMap(syncData.getVecMap(), guiLeft, guiTop);
+            }
         });
     }
 
     @Override
     public void tick() {
         super.tick();
+
+
     }
 
     @Override
@@ -72,9 +81,12 @@ public class ResearchScreenV2 extends Screen {
             PoseStackData poseStackData = manager.getPoseStackData();
             poseStackData.setPose(context);
 
+            // 每帧刷新一次转换后的鼠标坐标，避免悬停/tooltip 使用旧值
+            manager.handleMousePositon(mouseX, mouseY);
+
             // 渲染底层（背景和技能槽位，带缩放和平移变换）
             poseStackData.pushPose();
-            context.enableScissor(insideX, insideY, insideX + config.insideUV().width(), insideY + config.insideUV().height());
+//            context.enableScissor(insideX, insideY, insideX + config.insideUV().width(), insideY + config.insideUV().height());
 
             // 应用缩放和平移变换
             manager.applyTransform();
@@ -82,14 +94,17 @@ public class ResearchScreenV2 extends Screen {
             renderBackGround(context, guiLeft, guiTop, manager);
             renderTechSlot(context, manager, partialTick);
 
-            context.disableScissor();
+//            context.disableScissor();
             poseStackData.popPose();
-
+            poseStackData.translate(0,0,5000);
             // 渲染窗口边框（不受缩放影响）
             renderWindow(context, guiLeft, guiTop, manager);
 
             // 渲染配方页面（不受缩放影响）
             renderRecipeBackGround(context, guiLeft, guiTop, manager);
+
+            // 渲染 Tooltips（在屏幕空间，不受变换影响）
+            renderTooltips(context, manager, mouseX, mouseY);
         });
     }
 
@@ -104,7 +119,11 @@ public class ResearchScreenV2 extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        // TODO: 处理技能选择逻辑
+        if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
+            ClientResearchData.getManager().ifPresent(manager -> {
+                manager.handleMouseReleased(mouseX, mouseY, button);
+            });
+        }
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
@@ -137,14 +156,6 @@ public class ResearchScreenV2 extends Screen {
         return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
-    @Override
-    public void mouseMoved(double mouseX, double mouseY) {
-        ClientResearchData.getManager().ifPresent(manager ->
-            manager.handleMousePositon(mouseX, mouseY)
-        );
-        super.mouseMoved(mouseX, mouseY);
-    }
-
     private void renderBackGround(GuiGraphics context, int guiLeft, int guiTop, ClientScreenManager manager) {
         var bgContext = manager.getScreenConfigData().backGround();
         context.blit(bgContext.texture(), guiLeft, guiTop,
@@ -153,28 +164,34 @@ public class ResearchScreenV2 extends Screen {
                 bgContext.textureWidth(), bgContext.textureHeight());
     }
 
+    /**
+     * 渲染所有 TechSlot
+     *
+     * @param context GuiGraphics 上下文
+     * @param manager ClientScreenManager 管理器
+     * @param partialTick 帧间插值
+     */
     private void renderTechSlot(GuiGraphics context, ClientScreenManager manager, float partialTick) {
-        manager.getOptTechSlotData().ifPresent(techSlotData -> {
-            var poseStackData = manager.getPoseStackData();
-            var mouseData = manager.getMouseData();
-            var techSlots = techSlotData.getCachedTechSlots();
+        var techSlotData = manager.getTechSlotData();
+        if (techSlotData == null || techSlotData.isEmpty()) {
+            return;
+        }
 
-            // 获取转换后的鼠标坐标（屏幕坐标 -> GUI坐标）
-            double[] guiCoords = poseStackData.inverseTransform(
-                mouseData.getTransformedMouseX(),
-                mouseData.getTransformedMouseY()
-            );
+        var mouseData = manager.getMouseData();
 
-            int guiMouseX = Math.round((float) guiCoords[0]);
-            int guiMouseY = Math.round((float) guiCoords[1]);
+        // 使用 ClientScreenManager 的坐标转换方法获取转化后的鼠标坐标
+        // 这确保使用统一、经过验证的坐标转换逻辑
+        double guiMouseX = mouseData.getTransformedMouseX();
+        double guiMouseY = mouseData.getTransformedMouseY();
 
-            // 渲染所有技能槽位
-            // for (TechSlot techSlot : techSlots) {
-            //     techSlot.render(context, guiMouseX, guiMouseY, partialTick);
-            // }
-        });
-
+        // 渲染所有技能槽位
+        var techSlots = techSlotData.getCachedTechSlots();
+        for (var techSlot : techSlots) {
+            techSlot.render(context, (int) guiMouseX, (int) guiMouseY, partialTick);
+        }
     }
+
+
     private void renderWindow(GuiGraphics context, int guiLeft, int guiTop, ClientScreenManager manager) {
         var windowContext = manager.getScreenConfigData().window();
         context.blit(windowContext.texture(), guiLeft, guiTop,
@@ -194,4 +211,24 @@ public class ResearchScreenV2 extends Screen {
                 renderContext.width(), renderContext.height(),
                 renderContext.textureWidth(), renderContext.textureHeight());
     }
+
+
+    private void renderTooltips(GuiGraphics context, ClientScreenManager manager,
+                                int screenMouseX, int screenMouseY) {
+        // 检查鼠标是否在内部区域
+        if (!manager.isMouseInSide(screenMouseX, screenMouseY)) {
+            return;
+        }
+
+        // 使用 manager 的方法查找当前悬停的 TechSlot
+        TechSlot hoveredTechSlot = manager.findHoveredTechSlot();
+        if (hoveredTechSlot == null) {
+            return;
+        }
+
+        // 渲染 TechSlot 的 tooltip
+        hoveredTechSlot.renderTooltip(context, screenMouseX, screenMouseY);
+    }
+
+
 }

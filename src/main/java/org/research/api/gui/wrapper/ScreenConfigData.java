@@ -1,6 +1,5 @@
-package org.research.api.gui;
+package org.research.api.gui.wrapper;
 
-import org.research.api.util.BlitContext;
 import org.research.api.util.BlitContextV2;
 import org.research.api.util.UVContext;
 

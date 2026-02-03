@@ -70,26 +70,26 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     @Override
     public void initTechSlot() {
         //stage1
-        addTech(TechInit.A_TECH.get(),239,471)
+        addTech(TechInit.A_TECH.get(),239+294,471+157) //533,628
                 //stage2
-                .addTech(TechInit.B_TECH.get(),239,428)
+                .addTech(TechInit.B_TECH.get(),239+294,428+157)
                 //stage3
-                .addTech(TechInit.C_TECH.get(),239,387)
-                .addTech(TechInit.D_TECH.get(),277,387)
-                .addTech(TechInit.E_TECH.get(),199,387)
-                .addTech(TechInit.F_TECH.get(),316,387)
+                .addTech(TechInit.C_TECH.get(),239+294,387+157)
+                .addTech(TechInit.D_TECH.get(),277+294,387+157)
+                .addTech(TechInit.E_TECH.get(),199+294,387+157)
+                .addTech(TechInit.F_TECH.get(),316+294,387+157)
                 //stage4
-                .addTech(TechInit.G_TECH.get(),277,353)
-                .addTech(TechInit.H_TECH.get(),239,353)
-                .addTech(TechInit.I_TECH.get(),199,353)
-                .addTech(TechInit.J_TECH.get(),156,353)
+                .addTech(TechInit.G_TECH.get(),277+294,353+157)
+                .addTech(TechInit.H_TECH.get(),239+294,353+157)
+                .addTech(TechInit.I_TECH.get(),199+294,353+157)
+                .addTech(TechInit.J_TECH.get(),156+294,353+157)
                 //stage5
-                .addTech(TechInit.K_TECH.get(),156,319)
-                .addTech(TechInit.L_TECH.get(),199,319)
-                .addTech(TechInit.M_TECH.get(),239,319)
+                .addTech(TechInit.K_TECH.get(),156+294,319+157)
+                .addTech(TechInit.L_TECH.get(),199+294,319+157)
+                .addTech(TechInit.M_TECH.get(),239+294,319+157)
                 //stage6
-                .addTech(TechInit.N_TECH.get(),219,279)
-                .addTech(TechInit.O_TECH.get(),262,279)
+                .addTech(TechInit.N_TECH.get(),219+294,279+157)
+                .addTech(TechInit.O_TECH.get(),262+294,279+157)
 
                 //empty_tech
                 .addTech(TechInit.EMPTY_TECH.get(),0,0);

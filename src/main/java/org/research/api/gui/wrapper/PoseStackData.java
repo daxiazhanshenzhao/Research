@@ -1,4 +1,4 @@
-package org.research.api.gui;
+package org.research.api.gui.wrapper;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import lombok.Getter;

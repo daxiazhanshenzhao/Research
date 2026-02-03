@@ -1,14 +1,18 @@
 package org.research.api.gui;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import lombok.Getter;
 import lombok.Setter;
-import org.lwjgl.glfw.GLFW;
 import org.research.Research;
+import org.research.api.client.ClientResearchData;
 import org.research.api.config.ClientConfig;
+import org.research.api.gui.wrapper.*;
+import org.research.api.init.PacketInit;
+import org.research.api.tech.SyncData;
+import org.research.api.tech.TechInstance;
 import org.research.api.util.BlitContextV2;
-import org.research.api.util.Texture;
 import org.research.api.util.UVContext;
+import org.research.gui.minecraft.component.TechSlot;
+import org.research.network.research.ClientSetFocusPacket;
 
 import java.util.Optional;
 
@@ -16,349 +20,419 @@ import java.util.Optional;
 @Setter
 public class ClientScreenManager {
 
-
     private PoseStackData poseStackData = new PoseStackData();
-
     private ScreenConfigData screenConfigData = new ScreenConfigData(
-            0.5d,
-            2.0d,
+            0.5d, 2.0d,
             new BlitContextV2(Research.asResource("textures/gui/background.png"), 0, 0, 1024, 1024, 1024, 1024),
             new BlitContextV2(Research.asResource("textures/gui/window.png"), 0, 0, 256, 256, 256, 256),
-            new UVContext(15, 28, 226, 186),
-            0.8d
+            new UVContext(15, 28, 226, 186), 0.8d
     );
 
     private ScreenData screenData = new ScreenData();
     private MouseData mouseData = new MouseData();
-
-    private Optional<TechSlotData> optTechSlotData = Optional.empty();
+    private TechSlotData techSlotData;
+    private SyncData lastSyncData;
     private Optional<RecipeTechData> optRecipeTechData = Optional.empty();
+
+
+    // 拖拽距离阈值（像素）- 防止小的手抖被误认为拖拽
+    private static final double DRAG_THRESHOLD = 2.0;
 
     public ClientScreenManager() {
         refreshConfigSafely();
     }
 
+    // ==================== 基础工具方法 ====================
 
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
+    }
 
+    private int getCenterX() {
+        return screenData.getInsideX() + screenConfigData.insideUV().width() / 2;
+    }
 
+    private int getCenterY() {
+        return screenData.getInsideY() + screenConfigData.insideUV().height() / 2;
+    }
 
+    private boolean isMouseInRect(double x, double y, int left, int top, int w, int h) {
+        return x >= left && x < left + w && y >= top && y < top + h;
+    }
+
+    // ==================== 坐标转换核心 ====================
 
     /**
-     * 鼠标拖动平移界面
+     * 执行逆变换：屏幕坐标 -> 世界坐标
      */
-    public boolean translate(double mouseX, double mouseY, int button, double deltaX, double deltaY){
-        //在界面操作界面内
+    private double[] inverseTransform(double screenX, double screenY) {
+        int cx = getCenterX(), cy = getCenterY();
+        double x = screenX - mouseData.getOffsetX() - cx;
+        double y = screenY - mouseData.getOffsetY() - cy;
 
-        //是鼠标左键操作
+        float scale = mouseData.getScale();
+        if (Math.abs(scale) > 0.001f) {
+            x /= scale;
+            y /= scale;
+        }
 
-        //
-
-        return true;
+        return new double[]{x + cx, y + cy};
     }
 
     /**
+     * 执行正向变换：世界坐标 -> 屏幕坐标
+     */
+    private double[] forwardTransform(double worldX, double worldY) {
+        int cx = getCenterX(), cy = getCenterY();
+        float scale = mouseData.getScale();
+        double x = (worldX - cx) * scale + cx + mouseData.getOffsetX();
+        double y = (worldY - cy) * scale + cy + mouseData.getOffsetY();
+        return new double[]{x, y};
+    }
+
+    /**
+     * 更新转换后的鼠标坐标
+     */
+    private void updateTransformedMouseCoords(double screenX, double screenY) {
+        double[] result = inverseTransform(screenX, screenY);
+        mouseData.setTransformedMouseX(result[0]);
+        mouseData.setTransformedMouseY(result[1]);
+    }
+
+    // ==================== 缩放和拖拽 ====================
+
+    /**
      * 滚轮缩放界面（随鼠标中心缩放）
-     * @param mouseX 屏幕空间鼠标X坐标
-     * @param mouseY 屏幕空间鼠标Y坐标
-     * @param delta 滚轮增量
-     * @return 是否处理了该事件
      */
     public boolean handleMouseScrolled(double mouseX, double mouseY, double delta) {
-        // 检查鼠标是否在内部区域
         if (!isMouseInSide(mouseX, mouseY)) {
             return false;
         }
 
-        // 计算新的缩放值
         float oldScale = mouseData.getScale();
-        float newScale = oldScale + (float)(delta * 0.1);
-
-        // 限制缩放范围
-        newScale = (float) clamp(newScale, screenConfigData.minScale(), screenConfigData.maxScale());
+        float newScale = (float) clamp(oldScale + delta * 0.1, screenConfigData.minScale(), screenConfigData.maxScale());
 
         if (Math.abs(newScale - oldScale) < 0.001f) {
-            return true;  // 缩放值没有变化
+            return true;
         }
 
-        // 获取缩放中心（内部区域的中心）
-        int centerX = screenData.getInsideX() + screenConfigData.insideUV().width() / 2;
-        int centerY = screenData.getInsideY() + screenConfigData.insideUV().height() / 2;
+        int cx = getCenterX(), cy = getCenterY();
+        double worldX = (mouseX - mouseData.getOffsetX() - cx) / oldScale + cx;
+        double worldY = (mouseY - mouseData.getOffsetY() - cy) / oldScale + cy;
 
-        // 计算鼠标相对于当前变换后中心点的偏移（考虑当前的偏移量）
-        // 这里需要计算在当前变换下，鼠标指向的"世界空间"位置
-        double currentOffsetX = mouseData.getOffsetX();
-        double currentOffsetY = mouseData.getOffsetY();
-
-        double worldMouseX = (mouseX - currentOffsetX - centerX) / oldScale + centerX;
-        double worldMouseY = (mouseY - currentOffsetY - centerY) / oldScale + centerY;
-
-        // 调整偏移量，使得鼠标指向的世界空间位置在缩放后保持在屏幕上的相同位置
-        // 新的屏幕位置 = offsetX + (worldPos - centerX) * newScale + centerX
-        // 我们希望新的屏幕位置 = mouseX
-        // 所以: offsetX_new = mouseX - (worldMouseX - centerX) * newScale - centerX
-        double newOffsetX = mouseX - (worldMouseX - centerX) * newScale - centerX;
-        double newOffsetY = mouseY - (worldMouseY - centerY) * newScale - centerY;
-
-        // 更新缩放值和偏移量
         mouseData.setScale(newScale);
-        mouseData.setOffsetX(newOffsetX);
-        mouseData.setOffsetY(newOffsetY);
+        mouseData.setOffsetX(mouseX - (worldX - cx) * newScale - cx);
+        mouseData.setOffsetY(mouseY - (worldY - cy) * newScale - cy);
 
-        // 缩放后应用边界限制
         clampOffset();
-
-        // 更新当前鼠标的转换坐标
         updateTransformedMouseCoords(mouseX, mouseY);
-
         return true;
     }
 
     /**
      * 限制偏移量在合理范围内
-     * 确保背景边框不会超出 insideX, insideY 定义的可视区域
      */
     private void clampOffset() {
+        var bgCtx = screenConfigData.backGround();
         var insideUV = screenConfigData.insideUV();
-        var bgContext = screenConfigData.backGround();
+        int bgW = bgCtx.width(), bgH = bgCtx.height();
+        int winW = insideUV.width(), winH = insideUV.height();
 
-        int bgWidth = bgContext.width();
-        int bgHeight = bgContext.height();
-        int windowWidth = insideUV.width();
-        int windowHeight = insideUV.height();
-
-        if (bgWidth <= 0 || bgHeight <= 0 || windowWidth <= 0 || windowHeight <= 0) {
-            return;  // 如果没有设置边界信息，不做限制
+        if (bgW <= 0 || bgH <= 0 || winW <= 0 || winH <= 0) {
+            return;
         }
 
-        // 获取内部区域的中心点（相对于屏幕）
-        int centerX = screenData.getInsideX() + windowWidth / 2;
-        int centerY = screenData.getInsideY() + windowHeight / 2;
-
-        // 获取当前缩放值
         float scale = mouseData.getScale();
+        int halfW = winW / 2, halfH = winH / 2;
+        int guiL = screenData.getGuiLeft(), guiT = screenData.getGuiTop();
+        int insideL = screenData.getInsideX(), insideT = screenData.getInsideY();
 
-        // 背景的边界（世界空间）
-        double bgMinX = 0;
-        double bgMinY = 0;
-        double bgMaxX = bgWidth;
-        double bgMaxY = bgHeight;
+        int bgMinX = guiL - (insideL + halfW), bgMaxX = bgMinX + bgW;
+        int bgMinY = guiT - (insideT + halfH), bgMaxY = bgMinY + bgH;
 
-        // 内部区域的边界（相对于中心点）
-        double halfWindowWidth = windowWidth / 2.0;
-        double halfWindowHeight = windowHeight / 2.0;
+        double minOffsetX = Math.ceil(halfW - bgMaxX * scale);
+        double maxOffsetX = Math.floor(-halfW - bgMinX * scale);
+        double minOffsetY = Math.ceil(halfH - bgMaxY * scale);
+        double maxOffsetY = Math.floor(-halfH - bgMinY * scale);
 
-        // 计算偏移量的限制范围
-        // offsetX 的限制：确保背景的右边界不超过窗口的右边界
-        // 公式：offsetX + (bgMaxX - centerX) * scale <= halfWindowWidth
-        // 所以：offsetX <= halfWindowWidth - (bgMaxX - centerX) * scale
-        double maxOffsetX = halfWindowWidth - (bgMaxX - centerX) * scale;
+        if (bgW * scale <= winW) {
+            minOffsetX = maxOffsetX = 0;
+        }
+        if (bgH * scale <= winH) {
+            minOffsetY = maxOffsetY = 0;
+        }
 
-        // offsetX 的限制：确保背景的左边界不超过窗口的左边界
-        // 公式：offsetX + (bgMinX - centerX) * scale >= -halfWindowWidth
-        // 所以：offsetX >= -halfWindowWidth - (bgMinX - centerX) * scale
-        double minOffsetX = -halfWindowWidth - (bgMinX - centerX) * scale;
-
-        // 同理计算 Y 轴的限制
-        double maxOffsetY = halfWindowHeight - (bgMaxY - centerY) * scale;
-        double minOffsetY = -halfWindowHeight - (bgMinY - centerY) * scale;
-
-        // 应用限制
-        double currentOffsetX = mouseData.getOffsetX();
-        double currentOffsetY = mouseData.getOffsetY();
-
-        mouseData.setOffsetX(clamp(currentOffsetX, minOffsetX, maxOffsetX));
-        mouseData.setOffsetY(clamp(currentOffsetY, minOffsetY, maxOffsetY));
+        mouseData.setOffsetX(clamp(mouseData.getOffsetX(), minOffsetX, maxOffsetX));
+        mouseData.setOffsetY(clamp(mouseData.getOffsetY(), minOffsetY, maxOffsetY));
     }
 
     /**
-     * 将值限制在指定范围内
+     * 处理鼠标拖拽平移
+     *
+     * 防误触逻辑：
+     * - 检查 canDrag 标志（仅在鼠标在内容区域时为 true）
+     * - 累计拖拽距离，防止小的手抖被误认为拖拽
+     * - 超过 DRAG_THRESHOLD 阈值后才真正移动内容
+     * - 提高人体工学性能：给用户更多缓冲区间
      */
-    private double clamp(double value, double min, double max) {
-        return Math.max(min, Math.min(max, value));
+    public void handleMouseDrag(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        // 检查按下时是否允许拖拽
+        if (!mouseData.isCanDrag()) {
+            return;
+        }
+
+        // 累计拖拽距离（使用绝对值确保无论方向如何都累计）
+        mouseData.setDragTotal(mouseData.getDragTotal() + Math.abs(dragX) + Math.abs(dragY));
+
+        // 只有超过阈值才真正执行拖拽操作
+        if (mouseData.getDragTotal() > DRAG_THRESHOLD) {
+            float scale = mouseData.getScale();
+            // 应用拖拽偏移
+            mouseData.setOffsetX(mouseData.getOffsetX() + dragX / scale);
+            mouseData.setOffsetY(mouseData.getOffsetY() + dragY / scale);
+
+            // 限制偏移范围，防止拖出边界
+            clampOffset();
+        }
+
+        // 始终更新转换后的鼠标坐标（用于 hover 检测等）
+        updateTransformedMouseCoords(mouseX, mouseY);
+    }
+
+    // ==================== 鼠标区域检测 ====================
+
+    /**
+     * 检查鼠标是否在 GUI 窗口区域内
+     */
+    public boolean isMouseInGUI(double screenMouseX, double screenMouseY) {
+        var window = screenConfigData.window();
+        return isMouseInRect(screenMouseX, screenMouseY, screenData.getGuiLeft(), screenData.getGuiTop(),
+                window.textureWidth(), window.textureHeight());
     }
 
     /**
-     * 更新转换后的鼠标坐标（屏幕空间 -> 世界空间）
-     * @param screenX 屏幕空间的X坐标
-     * @param screenY 屏幕空间的Y坐标
+     * 检查鼠标是否在内部区域内
      */
-    private void updateTransformedMouseCoords(double screenX, double screenY) {
-        // 获取缩放中心
+    public boolean isMouseInSide(double screenMouseX, double screenMouseY) {
         var insideUV = screenConfigData.insideUV();
-        int centerX = screenData.getInsideX() + insideUV.width() / 2;
-        int centerY = screenData.getInsideY() + insideUV.height() / 2;
+        return isMouseInRect(screenMouseX, screenMouseY, screenData.getInsideX(), screenData.getInsideY(),
+                insideUV.width(), insideUV.height());
+    }
 
-        // 开始逆变换（从外到内，逆序撤销）
-        double tempMouseX = screenX;
-        double tempMouseY = screenY;
+    /**
+     * 查找鼠标悬停或点击的 TechSlot
+     *
+     * 使用转换后的世界坐标（内容坐标）进行命中检测
+     * 从后向前遍历，确保获取最上层的槽位
+     *
+     * @param worldMouseX 转换后的世界坐标X（内容坐标）
+     * @param worldMouseY 转换后的世界坐标Y（内容坐标）
+     * @return 鼠标悬停的 TechSlot，如果没有则返回 TechSlot.EMPTY
+     */
+    public TechSlot findHoveredTechSlot(double worldMouseX, double worldMouseY) {
+        if (techSlotData == null || techSlotData.isEmpty()) {
+            return TechSlot.EMPTY;
+        }
 
-        // 撤销平移偏移
-        tempMouseX -= mouseData.getOffsetX();
-        tempMouseY -= mouseData.getOffsetY();
+        var techSlots = techSlotData.getCachedTechSlots();
+        // 从后向前遍历，确保点击最上层的槽位
+        for (int i = techSlots.size() - 1; i >= 0; i--) {
+            var slot = techSlots.get(i);
+            if (slot.isMouseOver(worldMouseX, worldMouseY)) {
+                return slot;
+            }
+        }
+        return TechSlot.EMPTY;
+    }
 
-        // 撤销移动到中心
-        tempMouseX -= centerX;
-        tempMouseY -= centerY;
+    /**
+     * 查找鼠标悬停的 TechSlot（使用当前缓存的转换坐标）
+     *
+     * @return 鼠标悬停的 TechSlot，如果没有则返回 null
+     */
+    public TechSlot findHoveredTechSlot() {
+        TechSlot slot = findHoveredTechSlot(mouseData.getTransformedMouseX(), mouseData.getTransformedMouseY());
+        return slot == TechSlot.EMPTY ? null : slot;
+    }
 
-        // 撤销缩放
-        float scale = mouseData.getScale();
-        tempMouseX /= scale;
-        tempMouseY /= scale;
+    // ==================== 公共接口 ====================
 
-        // 撤销从中心移回
-        tempMouseX += centerX;
-        tempMouseY += centerY;
+    public void handleMousePositon(double mouseX, double mouseY) {
+        updateTransformedMouseCoords(mouseX, mouseY);
+    }
 
-        // 保存转换后的坐标（这就是世界空间坐标）
-        mouseData.setTransformedMouseX(tempMouseX);
-        mouseData.setTransformedMouseY(tempMouseY);
+    /**
+     * 处理鼠标释放事件
+     * - 若拖拽距离未超过阈值，认为是点击，发送焦点数据包到服务器
+     * - 重置拖拽状态标志
+     */
+    public void handleMouseReleased(double mouseX, double mouseY, int button) {
+        // 检查是否在内容区域内
+        if (!isMouseInSide(mouseX, mouseY)) {
+            mouseData.setDragTotal(0);
+            mouseData.setCanDrag(false);
+            return;
+        }
+
+        // 只有拖拽距离未超过阈值时，认为是点击操作，发送数据包
+        if (mouseData.getDragTotal() <= DRAG_THRESHOLD) {
+            double worldMouseX = mouseData.getTransformedMouseX();
+            double worldMouseY = mouseData.getTransformedMouseY();
+
+            // 查找被点击的 TechSlot
+            TechSlot clickedSlot = findHoveredTechSlot(worldMouseX, worldMouseY);
+            if (!clickedSlot.getTechInstance().isEmpty()) {
+                // 发送焦点数据包到服务器
+                sendFocusPacket(clickedSlot);
+            }
+        }
+
+        // 重置拖拽状态
+        mouseData.setDragTotal(0);
+        mouseData.setCanDrag(false);
+    }
+
+    /**
+     * 发送焦点数据包到服务器
+     */
+    private void sendFocusPacket(TechSlot slot) {
+        PacketInit.sendToServer(new ClientSetFocusPacket(slot.getTechInstance().getIdentifier()));
+    }
+
+    /**
+     * 处理鼠标点击事件
+     * 初始化拖拽状态：记录起点、重置累计距离、标记是否允许拖拽
+     * 同时检测是否点击了 TechSlot
+     */
+    public void handleMouseClick(double mouseX, double mouseY, int button) {
+        // 检查鼠标是否在内部区域
+        if (isMouseInSide(mouseX, mouseY)) {
+            // 记录拖拽起点（屏幕坐标）
+            mouseData.setDragStartX(mouseX);
+            mouseData.setDragStartY(mouseY);
+
+            // 重置累计拖拽距离
+            mouseData.setDragTotal(0);
+
+            // 标记允许拖拽
+            mouseData.setCanDrag(true);
+
+            // 检测点击的 TechSlot
+            double worldMouseX = mouseData.getTransformedMouseX();
+            double worldMouseY = mouseData.getTransformedMouseY();
+            TechSlot clickedSlot = findHoveredTechSlot(worldMouseX, worldMouseY);
+            if (!clickedSlot.getTechInstance().isEmpty()) {
+                // 触发槽位的点击事件（会播放声音）
+                clickedSlot.mouseClicked(worldMouseX, worldMouseY, button);
+            }
+        } else {
+            // 不在内容区域，禁止拖拽
+            mouseData.setCanDrag(false);
+        }
+    }
+
+    public boolean translate(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        return true;
     }
 
     /**
      * 应用变换到PoseStack
-     * 在渲染时调用，应用所有变换（平移和缩放）
      */
     public void applyTransform() {
         if (poseStackData.getPoseStack() == null) {
             return;
         }
 
-        // 获取缩放中心（内部区域的中心）
-        var insideUV = screenConfigData.insideUV();
-        int centerX = screenData.getInsideX() + insideUV.width() / 2;
-        int centerY = screenData.getInsideY() + insideUV.height() / 2;
-
-        // 先应用拖拽偏移
-        poseStackData.translate((float)mouseData.getOffsetX(), (float)mouseData.getOffsetY(), 0);
-
-        // 然后应用缩放（以内部区域中心为缩放中心）
-        poseStackData.translate(centerX, centerY, 0);
+        int cx = getCenterX(), cy = getCenterY();
+        poseStackData.translate((float) mouseData.getOffsetX(), (float) mouseData.getOffsetY(), 0);
+        poseStackData.translate(cx, cy, 0);
         poseStackData.scale(mouseData.getScale(), mouseData.getScale(), 1.0f);
-        poseStackData.translate(-centerX, -centerY, 0);
-    }
-
-    public void handleMousePositon(double mouseX, double mouseY){
-        // 更新转换后的鼠标坐标（考虑缩放和平移）
-        updateTransformedMouseCoords(mouseX, mouseY);
+        poseStackData.translate(-cx, -cy, 0);
     }
 
     /**
-     * 检查鼠标是否在 GUI 窗口区域内（基于屏幕坐标）
-     * @param screenMouseX 屏幕鼠标 X 坐标
-     * @param screenMouseY 屏幕鼠标 Y 坐标
-     * @return true 如果鼠标在 GUI 窗口区域
+     * 获取技能槽位数据，支持自动重新初始化和热更新
+     *
+     * 热更新逻辑：
+     * - 每帧都强制更新所有 TechSlot 的 TechInstance，确保 focus 等状态实时同步
+     * - 首次创建时初始化所有槽位
      */
-    public boolean isMouseInGUI(double screenMouseX, double screenMouseY){
-        // 窗口区域的边界（使用整张图片的尺寸）
-        int guiLeft = screenData.getGuiLeft();
-        int guiTop = screenData.getGuiTop();
-        int guiRight = guiLeft + screenConfigData.window().textureWidth();
-        int guiBottom = guiTop + screenConfigData.window().textureHeight();
+    public TechSlotData getTechSlotData() {
+        var currentSyncData = ClientResearchData.getSyncData();
 
-        return screenMouseX >= guiLeft && screenMouseX < guiRight
-                && screenMouseY >= guiTop && screenMouseY < guiBottom;
-    }
+        // 首次创建或需要完全重建
+        if (techSlotData == null || techSlotData.isEmpty()) {
+            techSlotData = new TechSlotData();
+            lastSyncData = currentSyncData;
 
-    /**
-     * 检查鼠标是否在内部区域内（基于屏幕坐标）
-     * @param screenMouseX 屏幕鼠标 X 坐标
-     * @param screenMouseY 屏幕鼠标 Y 坐标
-     * @return true 如果鼠标在内部区域
-     */
-    public boolean isMouseInSide(double screenMouseX, double screenMouseY){
+            var techs = currentSyncData.getCacheds();
+            var vecs = currentSyncData.getVecMap();
+            for (TechInstance tech : techs.values()) {
+                var pos = vecs.get(tech.getIdentifier());
+                if (pos != null) {
+                    techSlotData.addTechSlot(new TechSlot(pos.x(), pos.y(), tech));
+                }
+            }
+        } else {
+            // 热更新：每帧强制更新所有 TechSlot 的 TechInstance
+            // 这确保了 focus 等状态能实时反映到界面上
+            var techs = currentSyncData.getCacheds();
+            var existingSlots = new java.util.ArrayList<>(techSlotData.getCachedTechSlots());
 
-        var insideUV = screenConfigData.insideUV();
-        int insideLeft = screenData.getInsideX();
-        int insideTop = screenData.getInsideY();
-        int insideRight = insideLeft + insideUV.width();
-        int insideBottom = insideTop + insideUV.height();
+            // 强制更新所有槽位的 TechInstance
+            for (var slot : existingSlots) {
+                var techId = slot.getTechInstance().getIdentifier();
+                var updatedTech = techs.get(techId);
+                if (updatedTech != null) {
+                    // 直接更新，不做 equals 检查（因为 TechInstance.equals 只比较 tech 字段）
+                    slot.updateInstance(updatedTech);
+                }
+            }
 
-        return screenMouseX >= insideLeft && screenMouseX < insideRight
-                && screenMouseY >= insideTop && screenMouseY < insideBottom;
-    }
-
-
-
-
-
-
-
-
-    /**
-     * 处理鼠标拖拽平移
-     * @param dragX X方向拖拽增量
-     * @param dragY Y方向拖拽增量
-     */
-    public void handleMouseDrag(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        // 检查是否在内部区域
-        if (!isMouseInSide(mouseX, mouseY)) {
-            return;
+            lastSyncData = currentSyncData;
         }
 
-        // 累加偏移量
-        // 除以 scale 是为了在不同缩放级别下保持一致的拖拽速度
-        float scale = mouseData.getScale();
-        double newOffsetX = mouseData.getOffsetX() + dragX / scale;
-        double newOffsetY = mouseData.getOffsetY() + dragY / scale;
-
-        mouseData.setOffsetX(newOffsetX);
-        mouseData.setOffsetY(newOffsetY);
-
-        // 应用移动限制
-        clampOffset();
-
-        // 更新转换后的鼠标坐标
-        updateTransformedMouseCoords(mouseX, mouseY);
-    }
-
-    public void handleMouseClick(double mouseX, double mouseY, int button) {
-        // TODO: 实现点击逻辑
-    }
-
-    private void refreshConfigSafely() {
-        try {
-            screenConfigData = new ScreenConfigData(
-                    ClientConfig.MIN_SCALE.get(),
-                    ClientConfig.MAX_SCALE.get(),
-                    ClientConfig.getBackgroundBlitContextV2(),
-                    ClientConfig.getWindowBlitContextV2(),
-                    ClientConfig.getInsideUVContext(),
-                    ClientConfig.MOVABLE_AREA_RATIO.get()
-            );
-        } catch (IllegalStateException ignore) {
-            // Config not loaded yet; keep defaults.
-        }
+        return techSlotData;
     }
 
     /**
      * 重置所有状态数据
-     * 在关闭界面时调用，防止状态持久化导致的问题
      */
     public void reset() {
-        // 重置鼠标数据
         mouseData.setTransformedMouseX(0d);
         mouseData.setTransformedMouseY(0d);
-        mouseData.setOffsetX(0d);
-        mouseData.setOffsetY(0d);
-        mouseData.setScale(1.0f);
         mouseData.setDragStartX(0d);
         mouseData.setDragStartY(0d);
         mouseData.setDragTotal(0d);
         mouseData.setCanDrag(false);
 
-        // 重置屏幕数据
-        screenData.setScale(1.0f);
+
         screenData.setOpenRecipe(false);
         screenData.setGuiLeft(0);
         screenData.setGuiTop(0);
     }
 
+    /**
+     * 验证坐标转换的正确性
+     */
+    public boolean validateCoordinateTransform(double worldX, double worldY) {
+        double[] screenCoords = forwardTransform(worldX, worldY);
+        double[] result = inverseTransform(screenCoords[0], screenCoords[1]);
 
+        double tolerance = 0.01;
+        return Math.abs(result[0] - worldX) < tolerance && Math.abs(result[1] - worldY) < tolerance;
+    }
 
-
-//    public boolean isMouseInRecipePage(){
-//
-//    }
+    private void refreshConfigSafely() {
+        try {
+            screenConfigData = new ScreenConfigData(
+                    ClientConfig.MIN_SCALE.get(), ClientConfig.MAX_SCALE.get(),
+                    ClientConfig.getBackgroundBlitContextV2(), ClientConfig.getWindowBlitContextV2(),
+                    ClientConfig.getInsideUVContext(), ClientConfig.MOVABLE_AREA_RATIO.get()
+            );
+        } catch (IllegalStateException ignore) {
+        }
+    }
 
 
 }

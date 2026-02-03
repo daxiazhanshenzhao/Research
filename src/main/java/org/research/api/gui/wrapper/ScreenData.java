@@ -1,4 +1,4 @@
-package org.research.api.gui;
+package org.research.api.gui.wrapper;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -11,6 +11,8 @@ public class ScreenData {
     private boolean openRecipe;
     private int guiLeft,guiTop;
     private int insideX,insideY;
+
+
 
     public ScreenData() {
         this(1.0f, false, 0, 0);

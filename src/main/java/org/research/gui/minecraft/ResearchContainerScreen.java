@@ -164,10 +164,10 @@ public abstract class ResearchContainerScreen extends Screen {
         int insideY = centerY - insideContext.height() / 2;
 
         for (TechInstance instance : insList.values()) {
-            var vec = vecList.getOrDefault(instance.getIdentifier(), Vec2i.EMPTY);
-            var slot = new TechSlot(insideX + vec.x, insideY + vec.y, instance, this);
-            slots.put(instance.getIdentifier(), slot);
-            addWidget(slot);
+//            var vec = vecList.getOrDefault(instance.getIdentifier(), Vec2i.EMPTY);
+////            var slot = new TechSlot(insideX + vec.x, insideY + vec.y, instance, this);
+//            slots.put(instance.getIdentifier(), slot);
+//            addWidget(slot);
         }
 
         addRecipePageWidgets();
@@ -320,13 +320,13 @@ public abstract class ResearchContainerScreen extends Screen {
 
         // 如果有新的科技实例，添加它们
         for (var entry : insList.entrySet()) {
-            if (!slots.containsKey(entry.getKey())) {
-                var coords = calculateWindowCoords();
-                var vec = data.getVecMap().getOrDefault(entry.getKey(), Vec2i.EMPTY);
-                var slot = new TechSlot(coords.insideX + vec.x, coords.insideY + vec.y, entry.getValue(), this);
-                slots.put(entry.getKey(), slot);
-                addWidget(slot);
-            }
+//            if (!slots.containsKey(entry.getKey())) {
+//                var coords = calculateWindowCoords();
+//                var vec = data.getVecMap().getOrDefault(entry.getKey(), Vec2i.EMPTY);
+//                var slot = new TechSlot(coords.insideX + vec.x, coords.insideY + vec.y, entry.getValue(), this);
+//                slots.put(entry.getKey(), slot);
+//                addWidget(slot);
+//            }
         }
     }
 

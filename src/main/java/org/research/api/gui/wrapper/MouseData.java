@@ -1,4 +1,4 @@
-package org.research.api.gui;
+package org.research.api.gui.wrapper;
 
 
 import lombok.Getter;

@@ -1,10 +1,14 @@
-package org.research.api.gui;
+package org.research.api.gui.wrapper;
 
+import net.minecraft.resources.ResourceLocation;
+import org.research.api.tech.SyncData;
+import org.research.api.util.Vec2i;
 import org.research.gui.minecraft.component.TechSlot;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 客户端缓存数据管理类
@@ -115,5 +119,73 @@ public class TechSlotData {
      */
     public boolean isEmpty() {
         return cache.isEmpty();
+    }
+
+    /**
+     * 初始化所有 TechSlot 的位置
+     * 基于 syncData 中的坐标和 GUI 的偏移量
+     *
+     * @param syncData 同步数据，包含 TechSlot 的坐标信息
+     * @param guiLeftOffset GUI 左偏移量
+     * @param guiTopOffset GUI 顶部偏移量
+     */
+    public synchronized void initializePositions(SyncData syncData, int guiLeftOffset, int guiTopOffset) {
+        if (syncData == null || isEmpty()) {
+            return;
+        }
+
+        Map<ResourceLocation, Vec2i> vecMap = syncData.getVecMap();
+        if (vecMap == null || vecMap.isEmpty()) {
+            return;
+        }
+
+        // 遍历所有 TechSlot，根据 syncData 的坐标初始化位置
+        for (var techSlot : cache) {
+            var techId = techSlot.getTechInstance().getIdentifier();
+            var vec = vecMap.get(techId);
+            if (vec != null) {
+                // 计算新位置：guiOffset + syncData 的坐标
+                int newX = guiLeftOffset + vec.x();
+                int newY = guiTopOffset + vec.y();
+                techSlot.setPosition(newX, newY);
+            }
+        }
+    }
+
+    /**
+     * 简化版本的 initializePositions，直接使用 vecMap 中的值
+     * 使用 try-catch 处理反射异常
+     */
+    public synchronized void initializePositionsWithVecMap(Object vecMap, int guiLeftOffset, int guiTopOffset) {
+        if (vecMap == null || isEmpty()) {
+            return;
+        }
+
+        if (!(vecMap instanceof Map)) {
+            return;
+        }
+
+        try {
+            @SuppressWarnings("unchecked")
+            Map<Object, Object> map = (Map<Object, Object>) vecMap;
+
+            for (var techSlot : cache) {
+                var techId = techSlot.getTechInstance().getIdentifier();
+                var vec = map.get(techId);
+                if (vec != null) {
+                    // 使用反射获取 x 和 y
+                    int x = (int) vec.getClass().getMethod("x").invoke(vec);
+                    int y = (int) vec.getClass().getMethod("y").invoke(vec);
+
+                    // 计算新位置
+                    int newX = guiLeftOffset + x;
+                    int newY = guiTopOffset + y;
+                    techSlot.setPosition(newX, newY);
+                }
+            }
+        } catch (Exception e) {
+            // 如果出现异常，静默处理
+            e.printStackTrace();
+        }
     }
 }
