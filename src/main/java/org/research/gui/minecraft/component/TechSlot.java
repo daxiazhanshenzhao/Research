@@ -1,5 +1,7 @@
 package org.research.gui.minecraft.component;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
@@ -32,7 +34,18 @@ public class TechSlot extends AbstractButton {
     public static final TechSlot EMPTY = new TechSlot(0,0,TechInstance.EMPTY);
 
     private TechInstance tech;
-    private boolean focused = false;
+
+    /**
+     * -- SETTER --
+     *  设置客户端 focus 状态
+     * -- GETTER --
+     *  获取客户端 focus 状态
+
+     */
+    // 客户端 focus 状态（与 Screen 自带的 focused 不同，这是业务逻辑的 focus）
+    @Getter
+    @Setter
+    private boolean clientFocused = false;
 
     /**
      * 获取科技实例
@@ -64,14 +77,18 @@ public class TechSlot extends AbstractButton {
 
     @Override
     protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        boolean shouldShowFocus = tech.isFocused();
+        // 服务端 focus 状态（来自 TechInstance.isFocused()）
+        boolean serverFocused = tech.isFocused();
+
+        // 综合判定：服务端 focus 或客户端 focus 或鼠标悬停
+        boolean shouldShowFocus = serverFocused || clientFocused || isHoveredOrFocused();
 
         // 1.渲染框
-        BlitContext window = (shouldShowFocus || isHoveredOrFocused()) ? FOCUS_WINDOW : WINDOW;
+        BlitContext window = shouldShowFocus ? FOCUS_WINDOW : WINDOW;
         guiGraphics.blit(window.texture(), getX()-5, getY()-4, window.u(), window.v(), window.width(), window.height(), 512, 512);
 
         // 2.渲染背景
-        BlitContext bg = (shouldShowFocus || isHoveredOrFocused() || tech.getState().isBlackBg()) ? BG_BLACK : BG_WHITE;
+        BlitContext bg = (shouldShowFocus || tech.getState().isBlackBg()) ? BG_BLACK : BG_WHITE;
         guiGraphics.blit(bg.texture(), getX(), getY(), bg.u(), bg.v(), bg.width(), bg.height(), 512, 512);
 
         // 3.渲染内部图标

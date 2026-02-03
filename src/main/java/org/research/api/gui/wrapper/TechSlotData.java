@@ -1,5 +1,6 @@
 package org.research.api.gui.wrapper;
 
+import lombok.Getter;
 import net.minecraft.resources.ResourceLocation;
 import org.research.api.tech.SyncData;
 import org.research.api.util.Vec2i;
@@ -28,7 +29,17 @@ public class TechSlotData {
 
     // 不可变快照：用于外界安全读取
     private List<TechSlot> snapshot = Collections.emptyList();
+
+    /**
+     * -- GETTER --
+     *  获取客户端当前聚焦的 TechSlot
+     *
+     * @return 当前聚焦的 TechSlot，如果没有则返回 TechSlot.EMPTY
+     */
+    // 客户端当前聚焦的 TechSlot（与 Screen 自带的 focus 不同，这是我们自己的业务逻辑）
+    @Getter
     private TechSlot focusTechSlot = TechSlot.EMPTY;
+
     // 缓存的哈希值：用于高频调用时快速判断数据是否变化
     private int cachedDataHash = 0;
 
@@ -146,13 +157,48 @@ public class TechSlotData {
         }
     }
 
-    public void clearFocus(){
-
+    /**
+     * 清除客户端 focus 状态
+     */
+    public void clearFocus() {
+        // 清除之前聚焦的 TechSlot 的 clientFocused 状态
+        if (focusTechSlot != TechSlot.EMPTY) {
+            focusTechSlot.setClientFocused(false);
+        }
+        this.focusTechSlot = TechSlot.EMPTY;
     }
 
+    /**
+     * 设置客户端当前聚焦的 TechSlot
+     *
+     * @param techSlot 要聚焦的 TechSlot，传入 null 或 TechSlot.EMPTY 表示清除 focus
+     */
     public void setFocusTechSlot(TechSlot techSlot) {
+        // 清除之前聚焦的 TechSlot 的 clientFocused 状态
+        if (focusTechSlot != TechSlot.EMPTY) {
+            focusTechSlot.setClientFocused(false);
+        }
 
+        // 设置新的聚焦 TechSlot
+        if (techSlot == null || techSlot == TechSlot.EMPTY) {
+            this.focusTechSlot = TechSlot.EMPTY;
+        } else {
+            this.focusTechSlot = techSlot;
+            // 设置新 TechSlot 的 clientFocused 状态为 true
+            techSlot.setClientFocused(true);
+        }
     }
+
+    /**
+     * 检查指定的 TechSlot 是否是当前客户端聚焦的
+     *
+     * @param techSlot 要检查的 TechSlot
+     * @return true 表示是当前聚焦的，false 表示不是
+     */
+    public boolean isFocused(TechSlot techSlot) {
+        return techSlot != null && focusTechSlot != TechSlot.EMPTY && focusTechSlot.equals(techSlot);
+    }
+
     /**
      * 获取 TechSlot 数量
      */

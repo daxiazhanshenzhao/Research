@@ -11,7 +11,7 @@ public class ScreenData {
     private boolean openRecipe;
     private int guiLeft,guiTop;
     private int insideX,insideY;
-
+    private int guiTextureWidth,guiTextureHeight;
 
 
     public ScreenData() {

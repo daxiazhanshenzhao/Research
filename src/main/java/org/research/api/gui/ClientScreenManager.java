@@ -283,7 +283,8 @@ public class ClientScreenManager {
             TechSlot clickedSlot = findHoveredTechSlot(worldMouseX, worldMouseY);
             if (!clickedSlot.getTechInstance().isEmpty()) {
                 // 发送焦点数据包到服务器
-                sendFocusPacket(clickedSlot);
+                PacketInit.sendToServer(new ClientSetFocusPacket(clickedSlot.getTechInstance().getIdentifier()));
+                techSlotData.setFocusTechSlot(clickedSlot);
             }
         }
 
@@ -292,12 +293,6 @@ public class ClientScreenManager {
         mouseData.setCanDrag(false);
     }
 
-    /**
-     * 发送焦点数据包到服务器
-     */
-    private void sendFocusPacket(TechSlot slot) {
-        PacketInit.sendToServer(new ClientSetFocusPacket(slot.getTechInstance().getIdentifier()));
-    }
 
     /**
      * 处理鼠标点击事件
@@ -444,7 +439,6 @@ public class ClientScreenManager {
         mouseData.setDragTotal(0d);
         mouseData.setCanDrag(false);
 
-        screenData.setOpenRecipe(false);
         screenData.setGuiLeft(0);
         screenData.setGuiTop(0);
 

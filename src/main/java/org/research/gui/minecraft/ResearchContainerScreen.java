@@ -108,8 +108,8 @@ public abstract class ResearchContainerScreen extends Screen {
         int guiLeft = (this.width - 256) / 2;
         int guiTop = (this.height - 256) / 2;
 
-        addRenderableWidget(new OpenRecipeWidget(guiLeft+18, guiTop+104, this));
-        addRenderableWidget(new SearchEditBox(this.font, guiLeft+12,guiTop+98,71,23, this));
+//        addRenderableWidget(new OpenRecipeWidget(guiLeft+18, guiTop+104, this));
+//        addRenderableWidget(new SearchEditBox(this.font, guiLeft+12,guiTop+98,71,23, this));
 
         // 生成 5列4排的 RecipeTechSlot，每个22x22，紧挨着排列
         int recipeStartX = guiLeft + 13;  // 配方书区域起始X

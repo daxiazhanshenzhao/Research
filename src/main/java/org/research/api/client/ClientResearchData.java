@@ -15,7 +15,6 @@ import org.research.network.research.SendPacketPacket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 
 
 public class ClientResearchData {
@@ -64,15 +63,15 @@ public class ClientResearchData {
 
     private static ClientScreenManager manager;
 
-    public static Optional<ClientScreenManager> getManager() {
+    /**
+     * 获取客户端屏幕管理器
+     *
+     * @return ClientScreenManager 实例（保证不为 null）
+     */
+    public static ClientScreenManager getManager() {
         if (manager == null) {
-            try {
-                manager = new ClientScreenManager();
-            } catch (Exception e) {
-                e.printStackTrace();
-                return Optional.empty();
-            }
+            manager = new ClientScreenManager();
         }
-        return Optional.of(manager);
+        return manager;
     }
 }
