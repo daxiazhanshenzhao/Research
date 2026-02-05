@@ -205,23 +205,23 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
             clearWaiting();
         }
 
-        // 检查父节点中 AVAILABLE 状态的科技数量
-        List<ResourceLocation> parents = instance.getParents();
-        int availableParentCount = 0;
+        // 检查子节点中 AVAILABLE 状态的科技数量
+        List<ResourceLocation> children = getChildren(instance.getTech());
+        int availableChildCount = 0;
 
-        if (parents != null && !parents.isEmpty()) {
-            for (ResourceLocation parentId : parents) {
-                TechInstance parentInstance = techMap.get(parentId);
-                if (parentInstance != null && parentInstance.getState().equals(TechState.AVAILABLE)) {
-                    availableParentCount++;
+        if (children != null && !children.isEmpty()) {
+            for (ResourceLocation childId : children) {
+                TechInstance childInstance = techMap.get(childId);
+                if (childInstance != null && childInstance.getState().equals(TechState.AVAILABLE)) {
+                    availableChildCount++;
                 }
             }
         }
 
-        // 如果有超过 1 个 AVAILABLE 状态的父节点，将当前科技设置为 WAITING
-        if (availableParentCount > 1) {
+        // 如果有超过 1 个 AVAILABLE 状态的子节点，将当前科技设置为 WAITING
+        if (availableChildCount > 1) {
             instance.setTechState(TechState.WAITING);
-            player.sendSystemMessage(Component.literal("Tech set to WAITING due to multiple available parents: " + techId.toString()));
+            player.sendSystemMessage(Component.literal("Tech set to WAITING due to multiple available children: " + techId.toString()));
         }
 
         instance.setFocused(true);
