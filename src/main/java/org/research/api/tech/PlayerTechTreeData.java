@@ -10,9 +10,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import org.research.api.init.PacketInit;
 import org.research.api.init.TechInit;
 import org.research.api.tech.capability.ITechTreeCapability;
 import org.research.api.util.Vec2i;
+import org.research.network.research.PlayTechSoundPacket;
 
 import java.util.*;
 
@@ -168,6 +170,9 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                         // 只有一个或没有子节点：设置为 COMPLETED 状态
                         tech.setTechState(TechState.COMPLETED);
                     }
+                    playerSound();
+                    // 播放科技完成音效
+
 
                     syncStage(tech.getTech());
 
@@ -185,6 +190,16 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * 播放科技完成音效
+     * 发送网络包到客户端，在客户端播放声音
+     */
+    private void playerSound() {
+        if (player != null) {
+            PacketInit.sendToPlayer(new PlayTechSoundPacket(), player);
         }
     }
 
@@ -210,6 +225,16 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
         // 清除之前的焦点
         clearFocus();
+
+        // 检查当前科技是否为 COMPLETED 状态且有多个子节点
+        if (instance.getState().equals(TechState.COMPLETED)) {
+            List<ResourceLocation> children = getChildren(instance.getTech());
+            if (children.size() > 1) {
+                // 有多个子节点，将科技变回 WAITING 状态，允许玩家重新选择分支
+                instance.setTechState(TechState.WAITING);
+                player.sendSystemMessage(Component.literal("Tech has multiple branches. Choose your path."));
+            }
+        }
 
         // 如果当前科技不是 WAITING 状态，则清除其他 WAITING 状态的科技
         // 这样可以允许手动选择 WAITING 状态的科技

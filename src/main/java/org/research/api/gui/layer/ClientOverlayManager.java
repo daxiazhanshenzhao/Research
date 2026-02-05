@@ -2,6 +2,7 @@ package org.research.api.gui.layer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import org.research.api.client.ClientResearchData;
@@ -11,6 +12,7 @@ import org.research.api.recipe.RecipeIngredientRole;
 import org.research.api.recipe.category.RecipeCategory;
 import org.research.api.recipe.category.SlotBuilder;
 import org.research.api.tech.TechInstance;
+import org.research.api.tech.TechState;
 import org.research.api.util.BlitContextV2;
 import org.research.api.util.OverlayContext;
 import org.research.api.util.Vec2i;
@@ -64,6 +66,9 @@ public class ClientOverlayManager {
     /** 缓存的中心高度 */
     private int cachedCenterHeight = -1;
 
+    /** 缓存的科技是否为 WAITING 状态 */
+    private Boolean cachedIsWaiting = null;
+
     // ==================== 缓存管理方法 ====================
 
     /**
@@ -73,6 +78,7 @@ public class ClientOverlayManager {
     public void clearCache() {
         cachedRecipeData = null;
         cachedCenterHeight = -1;
+        cachedIsWaiting = null;
     }
 
     // ==================== 坐标计算方法 ====================
@@ -220,6 +226,47 @@ public class ClientOverlayManager {
     public void refreshCache() {
         cachedRecipeData = null;
         cachedCenterHeight = -1;
+        cachedIsWaiting = null;
+    }
+
+    /**
+     * 检查当前聚焦科技是否为 WAITING 状态
+     * WAITING 状态表示科技已完成但有多个分支需要玩家手动选择
+     * @return 如果是 WAITING 状态返回 true，否则返回 false
+     */
+    public boolean isWaitingState() {
+        if (cachedIsWaiting != null) {
+            return cachedIsWaiting;
+        }
+
+        var syncData = ClientResearchData.getSyncData();
+        if (syncData == null || syncData.getPlayerId() == -999) {
+            cachedIsWaiting = false;
+            return false;
+        }
+
+        var focusTechId = syncData.getFocusTech();
+        if (focusTechId == null || focusTechId.equals(TechInstance.EMPTY.getIdentifier())) {
+            cachedIsWaiting = false;
+            return false;
+        }
+
+        TechInstance focusTechInstance = syncData.getCacheds().get(focusTechId);
+        if (focusTechInstance == null || focusTechInstance.isEmpty()) {
+            cachedIsWaiting = false;
+            return false;
+        }
+
+        cachedIsWaiting = focusTechInstance.getState() == TechState.WAITING;
+        return cachedIsWaiting;
+    }
+
+    /**
+     * 获取 WAITING 状态的提示消息
+     * @return 本地化的提示消息
+     */
+    public Component getWaitingMessage() {
+        return Component.translatable("research.overlay.waiting_message");
     }
 
     // ==================== 内部数据类 ====================
@@ -282,6 +329,11 @@ public class ClientOverlayManager {
         // 如果已缓存，直接返回
         if (cachedRecipeData != null) {
             return cachedRecipeData;
+        }
+
+        // 检查是否为 WAITING 状态，如果是则不显示配方数据
+        if (isWaitingState()) {
+            return null;
         }
 
         // 获取 SyncData（服务端同步的数据）

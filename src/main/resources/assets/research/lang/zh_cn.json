@@ -1,0 +1,12 @@
+{
+  "key.research.open_research_screen": "打开研究界面",
+
+  "key.categories.research": "研究",
+
+  "commands.research.open.success.self": "为您自己打开了研究界面",
+  "commands.research.open.success.other" : "为 %s 打开了研究界面",
+  "commands.research.open.player_not_found": "未找到玩家",
+
+  "research.overlay.waiting_message": "手动追踪"
+
+}

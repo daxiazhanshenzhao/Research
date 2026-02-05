@@ -5,6 +5,8 @@
 
   "commands.research.open.success.self": "Opened research screen for yourself",
   "commands.research.open.success.other" : "Opened research screen for %s",
-  "commands.research.open.player_not_found": "Player not found"
+  "commands.research.open.player_not_found": "Player not found",
+
+  "research.overlay.waiting_message": "Please manually track new technology"
 
 }

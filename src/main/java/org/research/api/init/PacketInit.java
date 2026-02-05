@@ -44,6 +44,12 @@ public class PacketInit {
                 .consumerMainThread(OpenScreenPacket::handle)
                 .add();
 
+        net.messageBuilder(PlayTechSoundPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(PlayTechSoundPacket::new)
+                .encoder(PlayTechSoundPacket::toBytes)
+                .consumerMainThread(PlayTechSoundPacket::handle)
+                .add();
+
         //client -> server
         net.messageBuilder(ClientOpenScreenPaket.class, id(), NetworkDirection.PLAY_TO_SERVER)
                 .decoder(ClientOpenScreenPaket::new)

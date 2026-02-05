@@ -97,6 +97,19 @@ public class ResearchOverlay implements IGuiOverlay {
         int arrowWidth = arrowContext.width();
         int textOffset = 2; // 箭头和文字之间的间距
 
+        // 检查是否为 WAITING 状态
+        if (manager.isWaitingState()) {
+            // 渲染 WAITING 状态的提示信息
+            context.drawString(
+                    manager.getFont(),
+                    manager.getWaitingMessage(),
+                    manager.getOutputItemX(guiLeft, 0),
+                    manager.getOutputItemY(guiTop, 0),
+                    manager.getTextColor()
+            );
+            return; // 不再渲染其他内容
+        }
+
         // 渲染输出物品列表（不带箭头）
         List<ClientOverlayManager.ItemDisplay> outputItems = manager.getOutputItems();
         for (int i = 0; i < outputItems.size(); i++) {
