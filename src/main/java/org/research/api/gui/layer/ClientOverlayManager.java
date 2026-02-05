@@ -6,15 +6,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import org.research.api.client.ClientResearchData;
 import org.research.api.config.ClientConfig;
-import org.research.api.gui.ClientScreenManager;
 import org.research.api.recipe.IRecipe;
 import org.research.api.recipe.RecipeIngredientRole;
 import org.research.api.recipe.category.RecipeCategory;
 import org.research.api.recipe.category.SlotBuilder;
+import org.research.api.tech.TechInstance;
 import org.research.api.util.BlitContextV2;
 import org.research.api.util.OverlayContext;
 import org.research.api.util.Vec2i;
-import org.research.gui.minecraft.component.TechSlot;
 
 import java.util.*;
 
@@ -64,6 +63,17 @@ public class ClientOverlayManager {
 
     /** 缓存的中心高度 */
     private int cachedCenterHeight = -1;
+
+    // ==================== 缓存管理方法 ====================
+
+    /**
+     * 清除所有缓存数据
+     * 当服务端数据更新时调用，确保 Overlay 显示最新数据
+     */
+    public void clearCache() {
+        cachedRecipeData = null;
+        cachedCenterHeight = -1;
+    }
 
     // ==================== 坐标计算方法 ====================
 
@@ -263,7 +273,7 @@ public class ClientOverlayManager {
 
     /**
      * 获取当前聚焦科技的配方显示数据
-     * 从 ClientScreenManager 中获取聚焦的科技槽位，
+     * 直接从 SyncData 中获取服务端同步的焦点科技信息，
      * 解析其配方信息并转换为可显示的格式
      *
      * @return 配方显示数据，如果没有有效配方则返回 null
@@ -274,17 +284,26 @@ public class ClientOverlayManager {
             return cachedRecipeData;
         }
 
-        // 获取 ClientScreenManager
-        ClientScreenManager manager = ClientResearchData.getScreenManager();
+        // 获取 SyncData（服务端同步的数据）
+        var syncData = ClientResearchData.getSyncData();
+        if (syncData == null || syncData.getPlayerId() == -999) {
+            return null;
+        }
 
-        // 获取聚焦的 TechSlot
-        TechSlot focusTechSlot = manager.getTechSlotData().getFocusTechSlot();
-        if (focusTechSlot == null || focusTechSlot == TechSlot.EMPTY || focusTechSlot.getTechInstance().isEmpty()) {
+        // 获取服务端焦点科技的 ID
+        var focusTechId = syncData.getFocusTech();
+        if (focusTechId == null || focusTechId.equals(TechInstance.EMPTY.getIdentifier())) {
+            return null;
+        }
+
+        // 直接从 syncData 的 cacheds 中获取焦点科技的 TechInstance
+        TechInstance focusTechInstance = syncData.getCacheds().get(focusTechId);
+        if (focusTechInstance == null || focusTechInstance.isEmpty()) {
             return null;
         }
 
         // 获取配方信息
-        var recipeWrapper = focusTechSlot.getTechInstance().getRecipe();
+        var recipeWrapper = focusTechInstance.getRecipe();
         if (recipeWrapper == null) {
             return null;
         }
@@ -304,7 +323,7 @@ public class ClientOverlayManager {
 
         // 初始化配方并获取 builderSlots
         @SuppressWarnings("unchecked")
-        RecipeCategory<Recipe<?>> genericCategory = (RecipeCategory<Recipe<?>>) category;
+        RecipeCategory<Recipe> genericCategory = (RecipeCategory<Recipe>) category;
         genericCategory.setRecipe(recipe);
         Map<Integer, SlotBuilder> builderSlots = category.getBuilder().getBuilderSlots();
 

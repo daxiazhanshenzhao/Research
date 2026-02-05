@@ -159,17 +159,30 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                     // 根据子节点数量决定科技的最终状态
                     List<ResourceLocation> children = getChildren(tech.getTech());
 
+                    boolean isWaiting = false;
                     if (children.size() > 1) {
                         // 有多个子节点：设置为 WAITING 状态，等待玩家选择
                         tech.setTechState(TechState.WAITING);
+                        isWaiting = true;
                     } else {
                         // 只有一个或没有子节点：设置为 COMPLETED 状态
                         tech.setTechState(TechState.COMPLETED);
                     }
 
                     syncStage(tech.getTech());
-                    focus(tech.getIdentifier());
+
+                    // 先执行 tryNext 解锁子节点
                     tryNext(tech.getTech());
+
+                    // 只有当状态不是 WAITING 时，才自动聚焦到下一个科技
+                    // 如果是 WAITING 状态，等待玩家手动选择
+                    if (!isWaiting) {
+                        autoFocusNextTech(tech.getTech());
+                    } else {
+                        // WAITING 状态：保持焦点在当前科技，等待玩家选择
+                        focus(tech.getIdentifier());
+                        player.sendSystemMessage(Component.literal("Multiple paths available. Please choose next tech manually."));
+                    }
                 }
             }
         }
@@ -195,35 +208,16 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
         TechInstance instance = techMap.get(techId);
 
-        // 如果要设置focus，但科技是LOCKED状态，则不允许设置服务端focus
-        if (instance.getState().equals(TechState.LOCKED)) {
-            return;
-        }
-
+        // 清除之前的焦点
         clearFocus();
+
+        // 如果当前科技不是 WAITING 状态，则清除其他 WAITING 状态的科技
+        // 这样可以允许手动选择 WAITING 状态的科技
         if (!instance.getState().equals(TechState.WAITING)) {
             clearWaiting();
         }
 
-        // 检查子节点中 AVAILABLE 状态的科技数量
-        List<ResourceLocation> children = getChildren(instance.getTech());
-        int availableChildCount = 0;
-
-        if (children != null && !children.isEmpty()) {
-            for (ResourceLocation childId : children) {
-                TechInstance childInstance = techMap.get(childId);
-                if (childInstance != null && childInstance.getState().equals(TechState.AVAILABLE)) {
-                    availableChildCount++;
-                }
-            }
-        }
-
-        // 如果有超过 1 个 AVAILABLE 状态的子节点，将当前科技设置为 WAITING
-        if (availableChildCount > 1) {
-            instance.setTechState(TechState.WAITING);
-            player.sendSystemMessage(Component.literal("Tech set to WAITING due to multiple available children: " + techId.toString()));
-        }
-
+        // 设置焦点
         instance.setFocused(true);
         player.sendSystemMessage(Component.literal("Focused on tech: " + techId.toString()));
 
@@ -235,6 +229,50 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                 techInstance.setTechState(TechState.COMPLETED);
             }
         }
+    }
+
+    /**
+     * 自动将焦点移动到下一个可用的子节点
+     * 当玩家完成一个科技后，自动聚焦到后续科技
+     *
+     * @param completedTech 刚完成的科技
+     */
+    private void autoFocusNextTech(AbstractTech completedTech) {
+        // 获取已完成科技的所有子节点
+        List<ResourceLocation> children = getChildren(completedTech);
+
+        if (children.isEmpty()) {
+            // 没有子节点，清除焦点
+            clearFocus();
+            return;
+        }
+
+        // 查找第一个 AVAILABLE 状态的子节点
+        for (ResourceLocation childId : children) {
+            TechInstance childInstance = techMap.get(childId);
+            if (childInstance != null && childInstance.getState() == TechState.AVAILABLE) {
+                // 找到可用的子节点，自动聚焦
+                clearFocus();
+                childInstance.setFocused(true);
+                player.sendSystemMessage(Component.literal("Auto-focused on next tech: " + childId.toString()));
+                return;
+            }
+        }
+
+        // 如果没有找到 AVAILABLE 的子节点，检查是否有 WAITING 状态的
+        for (ResourceLocation childId : children) {
+            TechInstance childInstance = techMap.get(childId);
+            if (childInstance != null && childInstance.getState() == TechState.WAITING) {
+                // 找到等待中的子节点，自动聚焦
+                clearFocus();
+                childInstance.setFocused(true);
+                player.sendSystemMessage(Component.literal("Auto-focused on waiting tech: " + childId.toString()));
+                return;
+            }
+        }
+
+        // 如果都没有找到，清除焦点
+        clearFocus();
     }
 
     @Override
@@ -263,7 +301,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
             return;
         }
         
-        // 2. 只有一个子节点：子节点变为可用（需检查所有前置是否完成）
+        // 2. 只有一个子节点：子节点变为可用（需检查所有前置是否完成），并自动聚焦
         if (children.size() == 1) {
             // 子节点变为可用状态（仅当所有前置科技都已完成时）
             ResourceLocation childId = children.get(0);
@@ -273,13 +311,16 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                 if (areAllParentsCompleted(childInstance)) {
                     childInstance.setTechState(TechState.AVAILABLE);
                     syncStage(childInstance.getTech());
+                    // 自动聚焦到新解锁的子节点
+                    focus(childId);
                 }
             }
         }
         
-        // 3. 有多个子节点：所有子节点变为可用（需检查各自的前置）
+        // 3. 有多个子节点：所有子节点变为可用（需检查各自的前置），并聚焦到第一个解锁的子节点
         // 注意：当前科技的状态已在 tryComplete 中设置为 WAITING
         if (children.size() > 1) {
+            boolean firstUnlocked = false;
             // 所有子节点变为可用状态（仅当它们各自的所有前置科技都已完成时）
             for (ResourceLocation childId : children) {
                 TechInstance childInstance = techMap.get(childId);
@@ -288,6 +329,11 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                     if (areAllParentsCompleted(childInstance)) {
                         childInstance.setTechState(TechState.AVAILABLE);
                         syncStage(childInstance.getTech());
+                        // 自动聚焦到第一个解锁的子节点
+                        if (!firstUnlocked) {
+                            focus(childId);
+                            firstUnlocked = true;
+                        }
                     }
                 }
             }
