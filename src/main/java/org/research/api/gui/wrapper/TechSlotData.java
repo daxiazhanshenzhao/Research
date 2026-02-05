@@ -1,6 +1,10 @@
 package org.research.api.gui.wrapper;
 
 import lombok.Getter;
+import net.minecraft.resources.ResourceLocation;
+import org.research.api.client.ClientResearchData;
+import org.research.api.tech.SyncData;
+import org.research.api.tech.TechInstance;
 import org.research.gui.minecraft.component.TechSlot;
 
 import java.util.ArrayList;
@@ -14,7 +18,7 @@ public class TechSlotData {
     private final List<TechSlot> cache = new ArrayList<>();
     private List<TechSlot> snapshot = Collections.emptyList();
 
-    @Getter
+
     private TechSlot focusTechSlot = TechSlot.EMPTY;
 
     private int cachedDataHash = 0;
@@ -27,6 +31,9 @@ public class TechSlotData {
 
     // 每组的槽位数量
     public static final int SLOTS_PER_PAGE = 20;
+
+    // Focus 同步字段：记录上次同步的焦点 ID，避免重复查找
+    private ResourceLocation lastSyncedFocusTechId = null;
 
 
     public synchronized void setCachedTechSlots(List<TechSlot> techSlots) {
@@ -98,6 +105,9 @@ public class TechSlotData {
             focusTechSlot.setClientFocused(false);
         }
         this.focusTechSlot = TechSlot.EMPTY;
+
+        // 清除 Overlay 缓存数据
+        ClientResearchData.getOverlayManager().refreshCache();
     }
 
     public void setFocusTechSlot(TechSlot techSlot) {
@@ -110,6 +120,9 @@ public class TechSlotData {
             this.focusTechSlot = techSlot;
             techSlot.setClientFocused(true);
         }
+
+        // 清除 Overlay 缓存数据，强制重新获取新焦点的配方数据
+        ClientResearchData.getOverlayManager().refreshCache();
     }
 
     public boolean isFocused(TechSlot techSlot) {
@@ -351,5 +364,61 @@ public class TechSlotData {
         currentPageSlots.clear();
         currentPage = 0;
         isSearchMode = false;
+    }
+
+    /**
+     * 获取当前焦点的科技槽位
+     * 每次调用都会自动同步服务端的焦点状态
+     *
+     * 同步策略：
+     * 1. 从 SyncData 获取服务端焦点 ID
+     * 2. 如果焦点 ID 发生变化，查找对应的 TechSlot 并设置为焦点
+     * 3. 使用缓存的焦点 ID 避免重复查找相同的槽位
+     */
+    public TechSlot getFocusTechSlot() {
+        // 尝试从 SyncData 获取服务端的焦点状态
+        try {
+            SyncData syncData = ClientResearchData.getSyncData();
+
+            // 验证 syncData 是否有效
+            if (syncData == null || syncData.getPlayerId() == -999) {
+                return focusTechSlot;
+            }
+
+            // 获取服务端焦点的科技 ID
+            ResourceLocation serverFocusTechId = syncData.getFocusTech();
+
+            // 检查焦点是否有变化（避免重复查找）
+            if (serverFocusTechId != null &&
+                !serverFocusTechId.equals(TechInstance.EMPTY.getIdentifier()) &&
+                !serverFocusTechId.equals(lastSyncedFocusTechId)) {
+
+                // 焦点已变化，需要更新
+                lastSyncedFocusTechId = serverFocusTechId;
+
+                // 在缓存的槽位中查找对应的 TechSlot
+                if (!isEmpty()) {
+                    List<TechSlot> cachedSlots = getCachedTechSlots();
+                    for (TechSlot techSlot : cachedSlots) {
+                        if (techSlot.getTechInstance().getIdentifier().equals(serverFocusTechId)) {
+                            // 找到对应的槽位，更新焦点
+                            setFocusTechSlot(techSlot);
+                            break;
+                        }
+                    }
+                }
+            } else if (serverFocusTechId == null ||
+                       serverFocusTechId.equals(TechInstance.EMPTY.getIdentifier())) {
+                // 服务端没有焦点，清除客户端焦点
+                if (lastSyncedFocusTechId != null) {
+                    lastSyncedFocusTechId = null;
+                    clearFocus();
+                }
+            }
+        } catch (Exception e) {
+            // 静默失败，避免影响正常流程
+        }
+
+        return focusTechSlot;
     }
 }

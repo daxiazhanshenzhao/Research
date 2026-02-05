@@ -10,7 +10,9 @@ import org.research.api.gui.wrapper.*;
 import org.research.api.init.PacketInit;
 import org.research.api.tech.SyncData;
 import org.research.api.util.BlitContextV2;
+import org.research.api.util.InsideContext;
 import org.research.api.util.UVContext;
+import org.research.gui.minecraft.component.TechSlot;
 import org.research.gui.minecraft.component.TechSlot;
 import org.research.network.research.ClientSetFocusPacket;
 
@@ -218,6 +220,31 @@ public class ClientScreenManager {
         var insideUV = screenConfigData.insideUV();
         return isMouseInRect(screenMouseX, screenMouseY, screenData.getInsideX(), screenData.getInsideY(),
                 insideUV.width(), insideUV.height());
+    }
+
+    /**
+     * 检查鼠标是否在配方页面区域内
+     * 用于判断鼠标事件是否应该由配方页面的按钮处理
+     *
+     * @param mouseX 鼠标屏幕 X 坐标
+     * @param mouseY 鼠标屏幕 Y 坐标
+     * @return true 表示鼠标在配方页面区域内，false 表示不在
+     */
+    public boolean isMouseOnRecipePage(double mouseX, double mouseY) {
+        // 根据配方页面是否打开来判断鼠标是否在配方页面区域内
+        if (screenData.isOpenRecipe()) {
+            // 配方页面打开时的区域：使用 RECIPE_PAGE_OPEN 的尺寸
+            int recipeX = screenData.getGuiTextureWidth();
+            int recipeY = screenData.getGuiTextureHeight();
+            int recipeWidth = InsideContext.RECIPE_PAGE_OPEN.width();
+            int recipeHeight = InsideContext.RECIPE_PAGE_OPEN.height();
+
+            return mouseX >= recipeX && mouseX < recipeX + recipeWidth &&
+                   mouseY >= recipeY && mouseY < recipeY + recipeHeight;
+        } else {
+            // 配方页面关闭时：始终返回 false，因为没有配方界面区域
+            return false;
+        }
     }
 
     /**

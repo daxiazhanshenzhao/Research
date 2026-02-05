@@ -40,6 +40,32 @@ public class OpenRecipeWidget extends AbstractButton implements IOpenRenderable{
     @Override
     public void onPress() {
 
+
+        boolean wasOpen = screenManager.getScreenData().isOpenRecipe();
+        screenManager.getScreenData().setOpenRecipe(!wasOpen);
+
+        // 计算新位置
+        int newX, newY;
+        if (screenManager.getScreenData().isOpenRecipe()) {
+            // 现在是打开状态，向右偏移
+            newX = this.getX() + offX;
+            newY = this.getY() + offY;
+        } else {
+            // 现在是关闭状态，向左偏移（回到原位）
+            newX = this.getX() - offX;
+            newY = this.getY() - offY;
+        }
+
+        // 验证新位置是否合理
+        if (validatePosition(newX, newY)) {
+            this.setPosition(newX, newY);
+            isPositionValidated = true;
+        } else {
+            // 新位置不合理，回退状态并修复位置
+            screenManager.getScreenData().setOpenRecipe(wasOpen);
+            fixPosition();
+            isPositionValidated = false;
+        }
     }
 
     /**
@@ -131,42 +157,6 @@ public class OpenRecipeWidget extends AbstractButton implements IOpenRenderable{
         }
     }
 
-    @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        // 点击前验证当前坐标
-        if (!validatePosition(this.getX(), this.getY())) {
-            fixPosition();
-            return super.mouseReleased(mouseX, mouseY, button);
-        }
-
-        boolean wasOpen = screenManager.getScreenData().isOpenRecipe();
-        screenManager.getScreenData().setOpenRecipe(!wasOpen);
-
-        // 计算新位置
-        int newX, newY;
-        if (screenManager.getScreenData().isOpenRecipe()) {
-            // 现在是打开状态，向右偏移
-            newX = this.getX() + offX;
-            newY = this.getY() + offY;
-        } else {
-            // 现在是关闭状态，向左偏移（回到原位）
-            newX = this.getX() - offX;
-            newY = this.getY() - offY;
-        }
-
-        // 验证新位置是否合理
-        if (validatePosition(newX, newY)) {
-            this.setPosition(newX, newY);
-            isPositionValidated = true;
-        } else {
-            // 新位置不合理，回退状态并修复位置
-            screenManager.getScreenData().setOpenRecipe(wasOpen);
-            fixPosition();
-            isPositionValidated = false;
-        }
-
-        return super.mouseReleased(mouseX, mouseY, button);
-    }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {

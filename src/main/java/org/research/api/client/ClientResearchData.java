@@ -1,10 +1,10 @@
 package org.research.api.client;
 
-import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import org.research.api.gui.ClientScreenManager;
 import org.research.api.gui.MouseHandleBgData;
+import org.research.api.gui.layer.ClientOverlayManager;
 import org.research.api.init.PacketInit;
 import org.research.api.recipe.category.CatalystsRegistration;
 import org.research.api.recipe.helper.EmptyResearchPlugin;
@@ -61,17 +61,27 @@ public class ClientResearchData {
     //实际用于显示的配方
     public static final CatalystsRegistration recipeCategories = new CatalystsRegistration();
 
-    private static ClientScreenManager manager;
+    private static ClientOverlayManager overlayManager;
+
+    public static ClientOverlayManager getOverlayManager() {
+        if (overlayManager == null) {
+            overlayManager = new ClientOverlayManager();
+        }
+        return overlayManager;
+    }
+
+
+    private static ClientScreenManager screenManager;
 
     /**
      * 获取客户端屏幕管理器
      *
      * @return ClientScreenManager 实例（保证不为 null）
      */
-    public static ClientScreenManager getManager() {
-        if (manager == null) {
-            manager = new ClientScreenManager();
+    public static ClientScreenManager getScreenManager() {
+        if (screenManager == null) {
+            screenManager = new ClientScreenManager();
         }
-        return manager;
+        return screenManager;
     }
 }

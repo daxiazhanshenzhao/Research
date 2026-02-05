@@ -52,6 +52,8 @@ public class RecipeTechSlot extends AbstractButton implements IOpenRenderable{
 
         //渲染物品
         guiGraphics.renderItem(items.get(currentIndex), this.getX(), this.getY());
+        var count = items.get(currentIndex).getCount() > 1 ? items.get(currentIndex).getCount() : "";
+        guiGraphics.drawString(Minecraft.getInstance().font, String.valueOf(count) ,getX()+10,getY()+10,0xFFFFFF);
         //渲染覆盖层
     }
 

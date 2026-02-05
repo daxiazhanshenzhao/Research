@@ -123,6 +123,13 @@ public abstract class RecipeCategory<T> {
     }
 
     /**
+     * 获取 RecipeBuilder 用于外部访问 builderSlots
+     */
+    public RecipeBuilder getBuilder() {
+        return builder;
+    }
+
+    /**
      * 获取配方槽位列表（带缓存机制，避免频繁创建实例）
      * @param recipe 当前配方
      * @return 槽位列表

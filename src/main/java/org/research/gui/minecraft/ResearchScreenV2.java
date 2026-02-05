@@ -40,7 +40,7 @@ public class ResearchScreenV2 extends Screen {
     @Override
     protected void init() {
 
-        ClientScreenManager manager = ClientResearchData.getManager();
+        ClientScreenManager manager = ClientResearchData.getScreenManager();
         var config = manager.getScreenConfigData();
         // 获取窗口配置信息
         var windowContext = config.window();
@@ -125,7 +125,7 @@ public class ResearchScreenV2 extends Screen {
 
     private void resize(){
 
-        ClientScreenManager manager = ClientResearchData.getManager();
+        ClientScreenManager manager = ClientResearchData.getScreenManager();
         var config = manager.getScreenConfigData();
         // 获取窗口配置信息
         var windowContext = config.window();
@@ -168,13 +168,13 @@ public class ResearchScreenV2 extends Screen {
     @Override
     public void onClose() {
         // 重置管理器状态，防止持久化数据影响下次打开
-        ClientResearchData.getManager().reset();
+        ClientResearchData.getScreenManager().reset();
         super.onClose();
     }
 
     @Override
     public void render(GuiGraphics context, int mouseX, int mouseY, float partialTick) {
-        ClientScreenManager manager = ClientResearchData.getManager();
+        ClientScreenManager manager = ClientResearchData.getScreenManager();
 
         var screenData = manager.getScreenData();
         int guiLeft = screenData.getGuiLeft();
@@ -222,12 +222,24 @@ public class ResearchScreenV2 extends Screen {
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
-            ClientScreenManager manager = ClientResearchData.getManager();
+            ClientScreenManager manager = ClientResearchData.getScreenManager();
 
-            // 如果鼠标在配方页面上，不触发 TechSlot 的逻辑，让 widget 处理
-            if (!isMouseOnRecipePage(mouseX, mouseY, manager)) {
+            // 检查鼠标下的组件是否为 OpenRecipeWidget
+            for (var child : this.children()) {
+                if (child instanceof OpenRecipeWidget && child.isMouseOver(mouseX, mouseY)) {
+                    // 始终触发 OpenRecipeWidget 的释放方法
+                    return super.mouseReleased(mouseX, mouseY, button);
+                }
+            }
+
+            // 如果配方界面打开（鼠标在配方页面上），调用 super 方法处理按钮
+            if (manager.isMouseOnRecipePage(mouseX, mouseY)) {
+                return super.mouseReleased(mouseX, mouseY, button);
+            } else {
+                // 配方界面关闭，只处理 TechSlot 的逻辑，不调用 super（按钮不生效）
                 manager.handleMouseReleased(mouseX, mouseY, button);
-            }else return super.mouseReleased(mouseX, mouseY, button);
+                return true; // 消费事件
+            }
         }
         return super.mouseReleased(mouseX, mouseY, button);
     }
@@ -235,13 +247,24 @@ public class ResearchScreenV2 extends Screen {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
-            ClientScreenManager manager = ClientResearchData.getManager();
+            ClientScreenManager manager = ClientResearchData.getScreenManager();
 
-            // 如果鼠标在配方页面上，不触发 TechSlot 的拖拽逻辑
-            if (!isMouseOnRecipePage(mouseX, mouseY, manager)) {
+            // 检查鼠标下的组件是否为 OpenRecipeWidget
+            for (var child : this.children()) {
+                if (child instanceof OpenRecipeWidget && child.isMouseOver(mouseX, mouseY)) {
+                    // 始终触发 OpenRecipeWidget 的拖拽方法
+                    return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+                }
+            }
+
+            // 如果配方界面打开（鼠标在配方页面上），调用 super 方法处理按钮拖拽
+            if (manager.isMouseOnRecipePage(mouseX, mouseY)) {
+                return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+            } else {
+                // 配方界面关闭，只处理 TechSlot 的拖拽逻辑，不调用 super（按钮不生效）
                 manager.handleMouseDrag(mouseX, mouseY, button, dragX, dragY);
-            }else return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
-
+                return true; // 消费事件
+            }
         }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
@@ -249,20 +272,33 @@ public class ResearchScreenV2 extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
-            ClientScreenManager manager = ClientResearchData.getManager();
+            ClientScreenManager manager = ClientResearchData.getScreenManager();
 
-            // 如果鼠标在配方页面上，不触发 TechSlot 的点击逻辑，让 widget 处理
-            if (!isMouseOnRecipePage(mouseX, mouseY, manager)) {
+            // 检查鼠标下的组件是否为 OpenRecipeWidget
+            for (var child : this.children()) {
+                if (child instanceof OpenRecipeWidget && child.isMouseOver(mouseX, mouseY)) {
+                    // 始终触发 OpenRecipeWidget 的点击方法
+                    return super.mouseClicked(mouseX, mouseY, button);
+                }
+            }
+
+            // 如果配方界面打开（鼠标在配方页面上），调用 super 方法处理按钮点击
+            if (manager.isMouseOnRecipePage(mouseX, mouseY)) {
+                return super.mouseClicked(mouseX, mouseY, button);
+            } else {
+                // 配方界面关闭，只处理 TechSlot 的点击逻辑，不调用 super（按钮不生效）
                 manager.handleMouseClick(mouseX, mouseY, button);
-            }else return super.mouseClicked(mouseX, mouseY, button);}
+                return true; // 消费事件
+            }
+        }
         return super.mouseClicked(mouseX, mouseY, button);
     }
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        ClientScreenManager manager = ClientResearchData.getManager();
+        ClientScreenManager manager = ClientResearchData.getScreenManager();
 
         // 如果鼠标在配方页面上，不触发缩放逻辑
-        if (!isMouseOnRecipePage(mouseX, mouseY, manager)) {
+        if (!manager.isMouseOnRecipePage(mouseX, mouseY)) {
             manager.handleMouseScrolled(mouseX, mouseY, delta);
         }
 
@@ -359,7 +395,7 @@ public class ResearchScreenV2 extends Screen {
     private void renderTooltips(GuiGraphics context, ClientScreenManager manager,
                                 int screenMouseX, int screenMouseY) {
         // 如果鼠标在配方页面上，渲染配方槽位的 tooltip
-        if (isMouseOnRecipePage(screenMouseX, screenMouseY, manager)) {
+        if (manager.isMouseOnRecipePage(screenMouseX, screenMouseY)) {
             // 只有在配方页面打开时才渲染配方槽位的 tooltip
             if (manager.getScreenData().isOpenRecipe()) {
                 var techSlot = manager.getTechSlotData().getFocusTechSlot();
@@ -394,48 +430,5 @@ public class ResearchScreenV2 extends Screen {
 
         // 渲染 TechSlot 的 tooltip
         hoveredTechSlot.renderTooltip(context, screenMouseX, screenMouseY);
-    }
-
-    //对鼠标输入做出回应
-    private boolean isMouseOnRecipePage(double mouseX, double mouseY, ClientScreenManager manager) {
-        var screenData = manager.getScreenData();
-        var config = manager.getScreenConfigData();
-
-        int guiLeft = screenData.getGuiLeft();
-        int guiTop = screenData.getGuiTop();
-
-        // 对切换按钮做特殊处理，按钮永远被认为是在配方页面上
-        // 按钮位置：guiLeft + config.window().u() + OPEN_BUTTON_WIDTH, guiTop + config.window().v() + OPEN_BUTTON_HEIGHT
-        // 按钮大小：7x13 (来自 OpenRecipeWidget)
-        int buttonX = guiLeft + config.window().u() + OPEN_BUTTON_WIDTH;
-        int buttonY = guiTop + config.window().v() + OPEN_BUTTON_HEIGHT;
-        int buttonWidth = 7;
-        int buttonHeight = 13;
-
-        if (mouseX >= buttonX && mouseX < buttonX + buttonWidth &&
-            mouseY >= buttonY && mouseY < buttonY + buttonHeight) {
-            return true;
-        }
-
-        // 根据配方页面是否打开来判断鼠标是否在配方页面区域内
-        if (screenData.isOpenRecipe()) {
-            // 配方页面打开时的区域：145x213 (来自 RECIPE_PAGE_OPEN)
-            int recipeX = screenData.getGuiTextureWidth();
-            int recipeY = guiTop + screenData.getGuiTextureHeight();
-            int recipeWidth = OPEN_RECIPE_PAGE_WIDTH;
-            int recipeHeight = OPEN_RECIPE_PAGE_HEIGHT;
-
-            return mouseX >= recipeX && mouseX < recipeX + recipeWidth &&
-                   mouseY >= recipeY && mouseY < recipeY + recipeHeight;
-        } else {
-            // 配方页面关闭时的区域：35x213 (来自 RECIPE_PAGE_CLOSED)
-            int recipeX = screenData.getGuiTextureWidth();
-            int recipeY = guiTop + screenData.getGuiTextureHeight();
-            int recipeWidth = InsideContext.RECIPE_PAGE_CLOSED.width();
-            int recipeHeight = InsideContext.RECIPE_PAGE_CLOSED.height();
-
-            return mouseX >= recipeX && mouseX < recipeX + recipeWidth &&
-                   mouseY >= recipeY && mouseY < recipeY + recipeHeight;
-        }
     }
 }

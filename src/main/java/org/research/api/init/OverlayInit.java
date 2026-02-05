@@ -11,10 +11,10 @@ import org.research.gui.minecraft.ResearchOverlay;
 
 @Mod.EventBusSubscriber(value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD, modid = Research.MODID)
 public class OverlayInit {
+
     @SubscribeEvent
     public static void onRegisterOverlays(RegisterGuiOverlaysEvent event) {
-
-        event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "spell_selection_new", ResearchOverlay.instance);
+        event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "research_overlay", ResearchOverlay.instance);
     }
 
 }

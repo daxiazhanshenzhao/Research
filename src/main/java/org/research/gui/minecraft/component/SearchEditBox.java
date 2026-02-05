@@ -17,9 +17,14 @@ public class SearchEditBox extends EditBox implements IOpenRenderable{
     public static final int SEARCH_BOX_WIDTH = 65;
     public static final int SEARCH_BOX_HEIGHT = 17;
 
+    // 棕色字体颜色
+    private static final int BROWN_TEXT_COLOR = 0x8B4513;
+
     public SearchEditBox(int x, int y, ClientScreenManager manager) {
         super(Minecraft.getInstance().font, x, y,SEARCH_BOX_WIDTH, SEARCH_BOX_HEIGHT, Component.empty());
         this.screenManager = manager;
+        // 设置文本颜色为棕色
+        this.setTextColor(BROWN_TEXT_COLOR);
     }
 
 
@@ -30,7 +35,7 @@ public class SearchEditBox extends EditBox implements IOpenRenderable{
         screenManager.handleSearchEditBox(getValue());
 
         var context = InsideContext.RECIPE_SEARCH_BUTTON;
-        guiGraphics.blit(context.texture(),getX(),getY(),
+        guiGraphics.blit(context.texture(),getX()-3,getY()-3,
                 context.u(),context.v(),
                 context.width(),context.height(),
                 context.textureWidth(),context.textureHeight());

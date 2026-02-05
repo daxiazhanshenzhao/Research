@@ -127,19 +127,24 @@ public class SearchTechSlot extends AbstractButton {
     @Override
     public void onPress() {
         // 点击后定位到对应的科技并设置焦点
-        TechSlot techSlot = manager.getTechIconById(id);
-        if (techSlot != null && techSlot != TechSlot.EMPTY && !techSlot.getTechInstance().isEmpty()) {
-            // 发送焦点数据包到服务器
-            PacketInit.sendToServer(
-                new ClientSetFocusPacket(techSlot.getTechInstance().getIdentifier())
-            );
-            // 设置客户端焦点
-            manager.getTechSlotData().setFocusTechSlot(techSlot);
+        if (manager.getScreenData().isOpenRecipe()){
+            TechSlot techSlot = manager.getTechIconById(id);
+            if (techSlot != null && techSlot != TechSlot.EMPTY && !techSlot.getTechInstance().isEmpty()) {
+                // 发送焦点数据包到服务器
+                PacketInit.sendToServer(
+                        new ClientSetFocusPacket(techSlot.getTechInstance().getIdentifier())
+                );
+                // 设置客户端焦点
+                manager.getTechSlotData().setFocusTechSlot(techSlot);
 
-            // 将视图中心移动到目标科技位置
-            manager.centerOnTechSlot(techSlot);
+                // 将视图中心移动到目标科技位置
+                manager.centerOnTechSlot(techSlot);
+            }
         }
+
     }
+
+
 
     @Override
     protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
