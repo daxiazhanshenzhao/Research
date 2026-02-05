@@ -2,6 +2,7 @@ package org.research.api.gui;
 
 import lombok.Getter;
 import lombok.Setter;
+import net.minecraft.world.item.ItemStack;
 import org.research.Research;
 import org.research.api.client.ClientResearchData;
 import org.research.api.config.ClientConfig;
@@ -482,4 +483,64 @@ public class ClientScreenManager {
     }
 
 
+    public void handleSearchEditBox(String value) {
+        // 委托给 TechSlotData 执行搜索
+        techSlotData.performSearch(value);
+    }
+
+    public TechSlot getTechIconById(int id) {
+        // 委托给 TechSlotData 获取对应ID的槽位
+        return techSlotData.getSlotById(id);
+    }
+
+    public void handleChangePageButton(boolean nextPage) {
+        // 委托给 TechSlotData 执行翻页
+        techSlotData.changePage(nextPage);
+    }
+
+    /**
+     * 将视图移动到指定的科技槽位
+     * 目标位置：GUI 右边 3/4（水平）+ GUI 高度 1/2（垂直）
+     * @param techSlot 目标科技槽位
+     */
+    public void centerOnTechSlot(TechSlot techSlot) {
+        if (techSlot == null || techSlot.getTechInstance().isEmpty()) {
+            return;
+        }
+
+        // 直接获取科技槽位的世界坐标（左上角）
+        int techWorldX = techSlot.getX();
+        int techWorldY = techSlot.getY();
+
+        // 获取 inside 区域的信息
+        int insideX = screenData.getInsideX();
+        int insideY = screenData.getInsideY();
+        int insideWidth = screenConfigData.insideUV().width();
+        int insideHeight = screenConfigData.insideUV().height();
+
+        // 计算目标屏幕位置
+        // 水平：GUI 右边 3/4 处（因为左半部分被遮挡）
+        // 垂直：GUI 高度 1/2 处（垂直居中）
+        int targetScreenX = insideX + (int)(insideWidth * 0.75);
+        int targetScreenY = insideY + insideHeight / 2;
+
+        // 获取视口中心（用于坐标转换）
+        int centerX = getCenterX();
+        int centerY = getCenterY();
+
+        // 计算偏移量，使科技的世界坐标在屏幕上显示在目标位置
+        // 正向变换公式：screenX = (worldX - centerX) * scale + centerX + offsetX
+        // 求解 offsetX：offsetX = screenX - (worldX - centerX) * scale - centerX
+        // 简化：offsetX = targetScreenX - worldX * scale + centerX * (scale - 1)
+        float scale = mouseData.getScale();
+        double newOffsetX = targetScreenX - techWorldX * scale + centerX * (scale - 1);
+        double newOffsetY = targetScreenY - techWorldY * scale + centerY * (scale - 1);
+
+        // 设置新的偏移量
+        mouseData.setOffsetX(newOffsetX);
+        mouseData.setOffsetY(newOffsetY);
+
+        // 限制偏移范围
+        clampOffset();
+    }
 }

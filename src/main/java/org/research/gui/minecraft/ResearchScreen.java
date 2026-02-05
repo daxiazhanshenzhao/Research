@@ -6,7 +6,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import org.research.api.tech.SyncData;
 import org.research.api.util.BlitContext;
 import org.research.api.util.Texture;
-
+@Deprecated
 @OnlyIn(value = Dist.CLIENT)
 public class ResearchScreen extends ResearchContainerScreen {
 

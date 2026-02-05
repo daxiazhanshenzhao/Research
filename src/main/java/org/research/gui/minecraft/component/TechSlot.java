@@ -77,52 +77,88 @@ public class TechSlot extends AbstractButton {
 
     @Override
     protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // 服务端 focus 状态（来自 TechInstance.isFocused()）
+        boolean shouldShowFocus = shouldShowFocus();
+
+        renderFrame(guiGraphics, shouldShowFocus);
+        renderBackground(guiGraphics, shouldShowFocus);
+        renderIcon(guiGraphics, getX(), getY());
+        renderLock(guiGraphics, getX(), getY());
+    }
+
+    private boolean shouldShowFocus() {
         boolean serverFocused = tech.isFocused();
+        return serverFocused || clientFocused || isHoveredOrFocused();
+    }
 
-        // 综合判定：服务端 focus 或客户端 focus 或鼠标悬停
-        boolean shouldShowFocus = serverFocused || clientFocused || isHoveredOrFocused();
+    private void renderFrame(GuiGraphics guiGraphics, boolean focused) {
+        BlitContext window = focused ? FOCUS_WINDOW : WINDOW;
+        guiGraphics.blit(window.texture(), getX() - 5, getY() - 4,
+                window.u(), window.v(), window.width(), window.height(), 512, 512);
+    }
 
-        // 1.渲染框
-        BlitContext window = shouldShowFocus ? FOCUS_WINDOW : WINDOW;
-        guiGraphics.blit(window.texture(), getX()-5, getY()-4, window.u(), window.v(), window.width(), window.height(), 512, 512);
+    private void renderBackground(GuiGraphics guiGraphics, boolean focused) {
+        BlitContext bg = (focused || tech.getState().isBlackBg()) ? BG_BLACK : BG_WHITE;
+        guiGraphics.blit(bg.texture(), getX(), getY(),
+                bg.u(), bg.v(), bg.width(), bg.height(), 512, 512);
+    }
 
-        // 2.渲染背景
-        BlitContext bg = (shouldShowFocus || tech.getState().isBlackBg()) ? BG_BLACK : BG_WHITE;
-        guiGraphics.blit(bg.texture(), getX(), getY(), bg.u(), bg.v(), bg.width(), bg.height(), 512, 512);
+    public void renderIcon(GuiGraphics guiGraphics, int x, int y) {
+        if (tech == null || tech.getTech() == null) {
+            return;
+        }
 
-        // 3.渲染内部图标
-        if (tech != null && tech.getTech() != null) {
-            ResourceLocation iconResource = tech.getTech().getIconResource();
+        ResourceLocation iconResource = tech.getTech().getIconResource();
+        if (iconResource == null) {
+            renderDefaultIcon(guiGraphics, x, y);
+            return;
+        }
+
+        try {
             var minecraft = Minecraft.getInstance();
             AbstractTexture texture = minecraft.getTextureManager().getTexture(iconResource);
 
-            if (texture != MissingTextureAtlasSprite.getTexture()) {
-                guiGraphics.blit(iconResource, getX(), getY(), 0, 0, 16, 16, 16, 16);
+            if (texture != null && texture != MissingTextureAtlasSprite.getTexture()) {
+                guiGraphics.blit(iconResource, x, y, 0, 0, 16, 16, 16, 16);
             } else {
-                // 使用默认图标（物品渲染）
-                if (tech.getRecipe() != null && minecraft.getConnection() != null) {
-                    var recipe = IRecipe.getClientRecipe(tech.getRecipe(), minecraft);
-                    if (recipe != null) {
-                        var item = recipe.getResultItem(minecraft.getConnection().registryAccess());
-                        if (!item.isEmpty()) {
-                            guiGraphics.pose().pushPose();
-                            guiGraphics.pose().translate(0, 0, -100);
-                            guiGraphics.renderItem(item, getX()+2, getY()+2);
-                            guiGraphics.pose().popPose();
-                        }
-                    }
-                }
+                renderDefaultIcon(guiGraphics, x, y);
             }
+        } catch (Exception e) {
+            renderDefaultIcon(guiGraphics, x, y);
+        }
+    }
+
+    private void renderDefaultIcon(GuiGraphics guiGraphics, int x, int y) {
+        var minecraft = Minecraft.getInstance();
+        if (tech.getRecipe() == null || minecraft.getConnection() == null) {
+            return;
         }
 
-        // 4.渲染锁（最上层）
-        if (tech.getState().isLocked()){
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(0, 0, +100);
-            guiGraphics.blit(LOCK.texture(), getX()+5, getY()+3, LOCK.u(), LOCK.v(), LOCK.width(), LOCK.height(), 512, 512);
-            guiGraphics.pose().popPose();
+        var recipe = IRecipe.getClientRecipe(tech.getRecipe(), minecraft);
+        if (recipe == null) {
+            return;
         }
+
+        var item = recipe.getResultItem(minecraft.getConnection().registryAccess());
+        if (item.isEmpty()) {
+            return;
+        }
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, -100);
+        guiGraphics.renderItem(item, x + 2, y + 2);
+        guiGraphics.pose().popPose();
+    }
+
+    public void renderLock(GuiGraphics guiGraphics, int x, int y) {
+        if (!tech.getState().isLocked()) {
+            return;
+        }
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, +100);
+        guiGraphics.blit(LOCK.texture(), x + 5, y + 3,
+                LOCK.u(), LOCK.v(), LOCK.width(), LOCK.height(), 512, 512);
+        guiGraphics.pose().popPose();
     }
 
     @Override

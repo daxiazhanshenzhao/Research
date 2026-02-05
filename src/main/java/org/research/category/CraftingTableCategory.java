@@ -6,9 +6,9 @@ import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
+import org.research.Research;
 import org.research.api.recipe.IRecipe;
 import org.research.api.recipe.RecipeIngredientRole;
-import org.research.api.recipe.category.RecipeBuilder;
 import org.research.api.recipe.category.RecipeCategory;
 
 import java.util.List;
@@ -30,83 +30,78 @@ import java.util.List;
  */
 public class CraftingTableCategory extends RecipeCategory<CraftingRecipe> {
 
-    // 槽位尺寸和间距
-    private static final int SLOT_SIZE = 18; // 每个槽位18x18像素
 
-    // 输入槽位起始位置（3x3网格）
-    private static final int INPUT_START_X = 10;
-    private static final int INPUT_START_Y = 10;
-
-    // 输出槽位位置
-    private static final int OUTPUT_X = 80;
-    private static final int OUTPUT_Y = 28;
 
     @Override
     protected ResourceLocation getBackGround() {
         // 使用默认背景，或者指定自定义纹理
-        return Default_Background;
+        return Research.asResource("textures/gui/recipe/crafting_table.png");
     }
 
     @Override
-    protected void setRecipe(RecipeBuilder builder, CraftingRecipe recipe) {
-        // 获取配方的所有材料
+    public void setRecipe(CraftingRecipe recipe) {
+        // 清空之前的槽位配置
+        builder.getBuilderSlots().clear();
+
+        // 槽位布局常量
+        final int INPUT_START_X = 4 ;  // 输入槽位起始 X 坐标
+        final int INPUT_START_Y = 4;  // 输入槽位起始 Y 坐标
+        final int SLOT_SPACING = 21;   // 槽位间距
+        final int OUTPUT_X = 92;       // 输出槽位 X 坐标
+        final int OUTPUT_Y = 25;       // 输出槽位 Y 坐标（居中对齐 3x3 网格）
+
+        // 获取配方的材料列表
         List<Ingredient> ingredients = recipe.getIngredients();
 
-        // 判断是否为有序配方
-        boolean isShaped = recipe instanceof ShapedRecipe;
-
-        if (isShaped) {
-            // 有序配方：按照 ShapedRecipe 的宽高布局
-            ShapedRecipe shapedRecipe = (ShapedRecipe) recipe;
+        // 处理有序配方（ShapedRecipe）的特殊布局
+        if (recipe instanceof ShapedRecipe shapedRecipe) {
             int width = shapedRecipe.getWidth();
             int height = shapedRecipe.getHeight();
 
-            // 添加输入槽位（按网格布局）
+            // 配置输入槽位（按照配方的形状布局）
+            int slotId = 0;
             for (int row = 0; row < height; row++) {
                 for (int col = 0; col < width; col++) {
-                    int index = row * width + col;
-                    if (index < ingredients.size()) {
-                        Ingredient ingredient = ingredients.get(index);
-                        if (!ingredient.isEmpty()) {
-                            int x = INPUT_START_X + col * SLOT_SIZE;
-                            int y = INPUT_START_Y + row * SLOT_SIZE;
+                    int ingredientIndex = row * width + col;
+                    if (ingredientIndex < ingredients.size()) {
+                        Ingredient ingredient = ingredients.get(ingredientIndex);
 
-                            builder.addSlot(x, y, RecipeIngredientRole.INPUT)
-                                   .addIngredients(ingredient)
-                                   .setSlotBackGround(Default_Slot_Background);
-                        }
+                        int x = INPUT_START_X + col * SLOT_SPACING;
+                        int y = INPUT_START_Y + row * SLOT_SPACING;
+
+                        builder.addSlot(slotId++, x, y, RecipeIngredientRole.INPUT)
+                                .addIngredients(ingredient)
+                                .setSlotBackGround(Default_Slot_Background);
                     }
                 }
             }
         } else {
-            // 无序配方：按顺序填充到 3x3 网格
-            builder.setShapeless(); // 标记为无序配方
+            // 无序配方（ShapelessRecipe）：按顺序填充 3x3 网格
+            builder.setShapeless();
 
-            int index = 0;
-            for (Ingredient ingredient : ingredients) {
-                if (!ingredient.isEmpty() && index < 9) { // 最多9个槽位
-                    int row = index / 3;
-                    int col = index % 3;
-                    int x = INPUT_START_X + col * SLOT_SIZE;
-                    int y = INPUT_START_Y + row * SLOT_SIZE;
+            int slotId = 0;
+            for (int i = 0; i < Math.min(ingredients.size(), 9); i++) {
+                Ingredient ingredient = ingredients.get(i);
 
-                    builder.addSlot(x, y, RecipeIngredientRole.INPUT)
-                           .addIngredients(ingredient)
-                           .setSlotBackGround(Default_Slot_Background);
+                int row = i / 3;
+                int col = i % 3;
+                int x = INPUT_START_X + col * SLOT_SPACING;
+                int y = INPUT_START_Y + row * SLOT_SPACING;
 
-                    index++;
-                }
+                builder.addSlot(slotId++, x, y, RecipeIngredientRole.INPUT)
+                        .addIngredients(ingredient)
+                        .setSlotBackGround(Default_Slot_Background);
             }
         }
 
-        // 添加输出槽位
-        ItemStack output = IRecipe.getResultItem(recipe);
-        if (!output.isEmpty()) {
-            builder.addSlot(OUTPUT_X, OUTPUT_Y, RecipeIngredientRole.OUTPUT)
-                   .addItems(List.of(output))
-                   .setSlotBackGround(Default_Slot_Background);
-        }
+        // 配置输出槽位
+        ItemStack resultItem = IRecipe.getResultItem(recipe);
+        builder.addSlot(100, OUTPUT_X, OUTPUT_Y, RecipeIngredientRole.OUTPUT)
+                .addItems(List.of(resultItem))
+                .setSlotBackGround(Default_Slot_Background);
     }
+
+
 
     @Override
     public RecipeType<?> getRecipeType() {

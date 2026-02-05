@@ -58,7 +58,7 @@ public class ClientResearchData {
         }
     }
 
-    @Getter
+    //实际用于显示的配方
     public static final CatalystsRegistration recipeCategories = new CatalystsRegistration();
 
     private static ClientScreenManager manager;

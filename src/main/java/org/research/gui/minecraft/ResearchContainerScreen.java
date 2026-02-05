@@ -14,7 +14,6 @@ import org.lwjgl.glfw.GLFW;
 import org.research.api.client.ClientResearchData;
 import org.research.api.gui.MouseHandleBgData;
 import org.research.api.init.PacketInit;
-import org.research.api.recipe.WightConnection;
 import org.research.api.tech.*;
 import org.research.api.util.Vec2i;
 import org.research.api.util.BlitContext;
@@ -31,7 +30,7 @@ import org.research.network.research.ClientSetFocusPacket;
 
 //AdvancementsScreen
 //AdvancementWidget
-
+@Deprecated
 @OnlyIn(value = Dist.CLIENT)
 public abstract class ResearchContainerScreen extends Screen {
     //data
@@ -93,7 +92,6 @@ public abstract class ResearchContainerScreen extends Screen {
     private boolean openRecipeBook = false;
     private static final BlitContext RECIPE_BG_OPEN = BlitContext.of(Texture.TEXTURE,55,47,146,213);
     private static final BlitContext RECIPE_BG_OFF = BlitContext.of(Texture.TEXTURE,9,46,35,213);
-    private WightConnection connecter;
 
 
     public ResearchContainerScreen(SyncData data) {
@@ -254,7 +252,6 @@ public abstract class ResearchContainerScreen extends Screen {
     }
 
     private void renderRecipeSlots(GuiGraphics guiGraphics) {
-        connecter.render(guiGraphics);
 
     }
 
@@ -750,7 +747,6 @@ public abstract class ResearchContainerScreen extends Screen {
             PacketInit.sendToServer(new ClientSetFocusPacket(techId));
         }
 
-        connecter.setRecipe(focusSlot.getTechInstance().getRecipe());
     }
 
     public int getOpenTicks() {

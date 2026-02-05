@@ -9,11 +9,9 @@ import org.research.api.client.ClientResearchData;
 import org.research.api.gui.ClientScreenManager;
 import org.research.api.gui.wrapper.PoseStackData;
 import org.research.api.gui.wrapper.ScreenData;
+import org.research.api.recipe.category.RecipeCategory;
 import org.research.api.util.InsideContext;
-import org.research.gui.minecraft.component.OpenRecipeWidget;
-import org.research.gui.minecraft.component.SearchEditBox;
-import org.research.gui.minecraft.component.SearchTechSlot;
-import org.research.gui.minecraft.component.TechSlot;
+import org.research.gui.minecraft.component.*;
 
 public class ResearchScreenV2 extends Screen {
 
@@ -28,6 +26,12 @@ public class ResearchScreenV2 extends Screen {
 
     public static final int RECIPE_START_U = 14;
     public static final int RECIPE_START_V = 106;
+
+    public static final int CHANGE_BUTTON_LEFT_U = 12;
+    public static final int CHANGE_BUTTON_LEFT_V = 196;
+
+    public static final int CHANGE_BUTTON_RIGHT_U = 109;
+    public static final int CHANGE_BUTTON_RIGHT_V = 196;
 
     public ResearchScreenV2() {
         super(Component.empty());
@@ -74,6 +78,7 @@ public class ResearchScreenV2 extends Screen {
         int rows = 4;                       // 4排
         int recipeStartU = RECIPE_START_U;  // 配方书区域起始相对X偏移
         int recipeStartV = RECIPE_START_V;  // 配方书区域起始相对Y偏移（搜索框下方）
+        int id = 0;                         //0-19
 
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {
@@ -82,11 +87,26 @@ public class ResearchScreenV2 extends Screen {
                 addRenderableWidget(new SearchTechSlot(
                     screenData.getGuiTextureWidth() + slotU,
                     screenData.getGuiTextureHeight() + slotV,
-                    manager
+                    manager,id
                 ));
+                id++; // 每创建一个槽位，id递增1
             }
         }
 
+        addRenderableWidget(new ChangePageButton(
+                screenData.getGuiTextureWidth()+ CHANGE_BUTTON_LEFT_U,
+                screenData.getGuiTextureHeight()+ CHANGE_BUTTON_LEFT_V,
+                false,manager
+        ));
+
+        addRenderableWidget(new ChangePageButton(
+                screenData.getGuiTextureWidth() + CHANGE_BUTTON_RIGHT_U,
+                screenData.getGuiTextureHeight() + CHANGE_BUTTON_RIGHT_V,
+                true,manager
+        ));
+
+        // 初始化时触发一次空搜索，显示按首字母排序的前20个物品
+        manager.handleSearchEditBox("");
 
         super.init();
         resize();
@@ -135,9 +155,11 @@ public class ResearchScreenV2 extends Screen {
             var syncData = ClientResearchData.getSyncData();
             techSlotData.initializePositionsWithVecMap(syncData.getVecMap(), guiLeft, guiTop);
         }
-    }
 
-    @Override
+        // 清除所有 RecipeCategory 的槽位缓存，使得下次渲染时根据新的窗口坐标重新创建 RecipeTechSlot
+        ClientResearchData.recipeCategories.clearAllCache();
+
+    }
     public void tick() {
         super.tick();
 
@@ -169,7 +191,7 @@ public class ResearchScreenV2 extends Screen {
 
         // 渲染底层（背景和技能槽位，带缩放和平移变换）
         poseStackData.pushPose();
-//            context.enableScissor(insideX, insideY, insideX + config.insideUV().width(), insideY + config.insideUV().height());
+            context.enableScissor(insideX, insideY, insideX + config.insideUV().width(), insideY + config.insideUV().height());
 
         // 应用缩放和平移变换
         manager.applyTransform();
@@ -177,7 +199,7 @@ public class ResearchScreenV2 extends Screen {
         renderBackGround(context, guiLeft, guiTop, manager);
         renderTechSlot(context, manager, partialTick);
 
-//            context.disableScissor();
+            context.disableScissor();
         poseStackData.popPose();
         poseStackData.translate(0,0,5000);
         // 渲染窗口边框（不受缩放影响）
@@ -187,6 +209,7 @@ public class ResearchScreenV2 extends Screen {
         renderRecipeBackGround(context, guiLeft, guiTop, manager);
 
         renderWidget(context, mouseX, mouseY, partialTick,manager);
+        renderRecipe(context,manager,mouseX,mouseY,partialTick);
         // 渲染 Tooltips（在屏幕空间，不受变换影响）
         renderTooltips(context, manager, mouseX, mouseY);
     }
@@ -315,10 +338,46 @@ public class ResearchScreenV2 extends Screen {
         }
     }
 
+    private void renderRecipe(GuiGraphics context, ClientScreenManager manager,int mouseX,int mouseY,float partialTick) {
+        var techSlot = manager.getTechSlotData().getFocusTechSlot();
+        var tWidth = manager.getScreenData().getGuiTextureWidth();
+        var tHeight = manager.getScreenData().getGuiTextureHeight();
+        if (!manager.getScreenData().isOpenRecipe()) return;
+
+        if (techSlot.equals(TechSlot.EMPTY)) {
+            context.drawString(Minecraft.getInstance().font, "no recipe selected",tWidth+10 ,tHeight+20,0xFFFFFF);
+            return;
+        }
+
+        var recipeWrapper = techSlot.getTechInstance().getRecipe();
+        RecipeCategory<?> categories = ClientResearchData.recipeCategories.getRecipeCategories().get(recipeWrapper.type());
+
+        categories.render(context, tWidth, tHeight,techSlot.getRecipe(),mouseX,mouseY,partialTick);
+
+    }
+
     private void renderTooltips(GuiGraphics context, ClientScreenManager manager,
                                 int screenMouseX, int screenMouseY) {
-        // 如果鼠标在配方页面上，不渲染 TechSlot 的 tooltip
+        // 如果鼠标在配方页面上，渲染配方槽位的 tooltip
         if (isMouseOnRecipePage(screenMouseX, screenMouseY, manager)) {
+            // 只有在配方页面打开时才渲染配方槽位的 tooltip
+            if (manager.getScreenData().isOpenRecipe()) {
+                var techSlot = manager.getTechSlotData().getFocusTechSlot();
+                if (!techSlot.equals(TechSlot.EMPTY)) {
+                    var recipeWrapper = techSlot.getTechInstance().getRecipe();
+                    RecipeCategory<?> categories = ClientResearchData.recipeCategories.getRecipeCategories().get(recipeWrapper.type());
+                    var tWidth = manager.getScreenData().getGuiTextureWidth();
+                    var tHeight = manager.getScreenData().getGuiTextureHeight();
+                    categories.renderTooltips(context, tWidth, tHeight, techSlot.getRecipe(), screenMouseX, screenMouseY);
+                }
+
+                // 渲染搜索槽位的 tooltip
+                for (var widget : this.renderables) {
+                    if (widget instanceof SearchTechSlot searchSlot) {
+                        searchSlot.renderTooltip(context, screenMouseX, screenMouseY);
+                    }
+                }
+            }
             return;
         }
 

@@ -26,6 +26,9 @@ public class ClientConfig {
 
     public static final ForgeConfigSpec.DoubleValue MOVABLE_AREA_RATIO;
 
+    public static final ForgeConfigSpec.IntValue OVERLAY_X_OFFSET;
+    public static final ForgeConfigSpec.IntValue OVERLAY_Y_OFFSET;
+
     public static final ForgeConfigSpec SPEC;
 
     static {
@@ -60,11 +63,24 @@ public class ClientConfig {
         // ========== 背景移动限制配置 ==========
         CLIENT_BUILDER.push("movable");
         MOVABLE_AREA_RATIO = CLIENT_BUILDER.comment(
+                "无效属性，已经弃用",
                 "背景可移动区域比例 (0.0-1.0)",
                 "控制背景实际可以平移的范围。",
                 "例如: 0.8 表示 1024x1024 的背景只有 819x819 (1024*0.8) 的区域可以用于平移",
                 "值越小，可移动范围越小；1.0 表示整个背景都可以移动"
         ).defineInRange("areaRatio", 0.8d, 0.0d, 1.0d);
+        CLIENT_BUILDER.pop();
+
+        // ========== 覆盖层偏移配置 ==========
+        CLIENT_BUILDER.push("overlay");
+        OVERLAY_X_OFFSET = CLIENT_BUILDER.comment(
+                "ResearchOverlay 的水平偏移量（像素）",
+                "正值向右偏移，负值向左偏移"
+        ).defineInRange("xOffset", 0, -1000, 1000);
+        OVERLAY_Y_OFFSET = CLIENT_BUILDER.comment(
+                "ResearchOverlay 的垂直偏移量（像素）",
+                "正值向下偏移，负值向上偏移"
+        ).defineInRange("yOffset", 0, -1000, 1000);
         CLIENT_BUILDER.pop();
 
         CLIENT_BUILDER.pop();
@@ -159,5 +175,19 @@ public class ClientConfig {
         }
 
         return new UVContext(u, v, width, height);
+    }
+
+    /**
+     * 获取 ResearchOverlay 的水平偏移量
+     */
+    public static int getOverlayXOffset() {
+        return OVERLAY_X_OFFSET.get();
+    }
+
+    /**
+     * 获取 ResearchOverlay 的垂直偏移量
+     */
+    public static int getOverlayYOffset() {
+        return OVERLAY_Y_OFFSET.get();
     }
 }
