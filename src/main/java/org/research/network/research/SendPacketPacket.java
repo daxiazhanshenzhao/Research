@@ -4,7 +4,7 @@ package org.research.network.research;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 import org.research.api.init.PacketInit;
-import org.research.api.util.ResearchApi;
+import org.research.api.util.ResearchAPI;
 
 import java.util.function.Supplier;
 
@@ -34,7 +34,7 @@ public class SendPacketPacket {
                 var player = context.getSender();
 
                 // 获取玩家的科技树数据并发送给客户端
-                ResearchApi.getTechTreeData(player).ifPresent(techTree -> {
+                ResearchAPI.getTechTreeData(player).ifPresent(techTree -> {
                     var syncData = techTree.getSyncData();
                     PacketInit.sendToPlayer(new ClientboundSyncPlayerData(syncData), player);
                 });

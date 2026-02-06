@@ -10,6 +10,7 @@ import net.minecraft.network.syncher.EntityDataSerializer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import org.research.api.init.PacketInit;
+import org.research.api.tech.capability.PlayerTechTreeData;
 import org.research.api.util.Vec2i;
 import org.research.network.research.ClientboundSyncPlayerData;
 

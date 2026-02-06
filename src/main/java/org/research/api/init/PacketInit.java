@@ -51,12 +51,6 @@ public class PacketInit {
                 .add();
 
         //client -> server
-        net.messageBuilder(ClientOpenScreenPaket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(ClientOpenScreenPaket::new)
-                .encoder(ClientOpenScreenPaket::toBytes)
-                .consumerMainThread(ClientOpenScreenPaket::handle)
-                .add();
-
         net.messageBuilder(SendPacketPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
                 .decoder(SendPacketPacket::new)
                 .encoder(SendPacketPacket::toBytes)

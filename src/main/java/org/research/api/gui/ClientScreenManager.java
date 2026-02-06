@@ -35,7 +35,6 @@ public class ClientScreenManager {
     private MouseData mouseData = new MouseData();
     private TechSlotData techSlotData = new TechSlotData();
     private @Nullable SyncData syncData;
-    private Optional<RecipeTechData> optRecipeTechData = Optional.empty();
 
 
     // 拖拽距离阈值（像素）- 防止小的手抖被误认为拖拽

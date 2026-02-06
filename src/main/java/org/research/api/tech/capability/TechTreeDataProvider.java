@@ -1,14 +1,8 @@
 package org.research.api.tech.capability;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ICapabilitySerializable;
@@ -19,9 +13,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.research.Research;
 import org.research.api.init.CapInit;
-import org.research.api.tech.PlayerTechTreeData;
-import org.research.api.tech.TechInstance;
-import org.research.api.util.ResearchApi;
+import org.research.api.util.ResearchAPI;
 
 import javax.annotation.Nullable;
 
@@ -81,8 +73,8 @@ public class TechTreeDataProvider implements ICapabilitySerializable<CompoundTag
             oldPlayer.revive();
 
             if (oldPlayer instanceof ServerPlayer && newPlayer instanceof ServerPlayer) {
-                LazyOptional<ITechTreeCapability> oldCap = ResearchApi.getTechTreeData((ServerPlayer) oldPlayer);
-                LazyOptional<ITechTreeCapability> newCap = ResearchApi.getTechTreeData((ServerPlayer) newPlayer);
+                LazyOptional<ITechTreeCapability> oldCap = ResearchAPI.getTechTreeData((ServerPlayer) oldPlayer);
+                LazyOptional<ITechTreeCapability> newCap = ResearchAPI.getTechTreeData((ServerPlayer) newPlayer);
 
                 oldCap.ifPresent(oldC ->
                         newCap.ifPresent(newC->{
@@ -99,7 +91,7 @@ public class TechTreeDataProvider implements ICapabilitySerializable<CompoundTag
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            ResearchApi.getTechTreeData(serverPlayer).ifPresent(data -> {
+            ResearchAPI.getTechTreeData(serverPlayer).ifPresent(data -> {
                 data.setPlayer(serverPlayer);
             });
         }

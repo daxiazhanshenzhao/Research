@@ -3,7 +3,6 @@ package org.research.api.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import org.research.api.gui.ClientScreenManager;
-import org.research.api.gui.MouseHandleBgData;
 import org.research.api.gui.layer.ClientOverlayManager;
 import org.research.api.init.PacketInit;
 import org.research.api.recipe.category.CatalystsRegistration;
@@ -28,23 +27,6 @@ public class ClientResearchData {
         LocalPlayer localPlayer = Minecraft.getInstance().player;
         return playerSyncedDataLookup.getOrDefault(localPlayer.getId(),emptySyncedData);
     }
-
-    public static void syncFromServer(){
-        PacketInit.sendToServer(new SendPacketPacket());
-    }
-
-    //GUI============================
-
-    //mouseHandleBgData
-    public static final HashMap<Integer, MouseHandleBgData> mouseData = new HashMap<>();
-    public static final MouseHandleBgData emptyMouseData = MouseHandleBgData.EMPTY;
-
-    public static MouseHandleBgData getMouseData() {
-        LocalPlayer localPlayer = Minecraft.getInstance().player;
-        return mouseData.getOrDefault(localPlayer.getId(),emptyMouseData);
-    }
-    //tech slots cache
-
 
     //recipeManager================================
     public static final List<ResearchPlugin> recipePluginData = new ArrayList<>();

@@ -28,25 +28,8 @@ public class RecipeTransferHandler<C extends AbstractContainerMenu, R> {
     public void transferRecipe(C container, R recipe,Player player, boolean maxTransfer) {
 
 
-
-        List<Slot> craftingSlots = Collections.unmodifiableList(recipeBuilder.getRecipeSlots(container,recipe));
+        List<Slot> craftingSlots = Collections.unmodifiableList(recipeBuilder.getRecipeSlots(container, recipe));
         List<Slot> inventorySlots = Collections.unmodifiableList(recipeBuilder.getInventorySlots(container, recipe));
-
-        get(craftingSlots,inventorySlots);
-
-//        TransferRecipePaket paket = new TransferRecipePaket(
-//                recipeBuilder.getMenuType(),
-//                recipeBuilder.getRecipeSlotIndices(craftingSlots),
-//                recipeBuilder.getInventorySlotIndices(inventorySlots),
-//                maxTransfer
-//        );
-//
-//        PacketInit.sendToServer(paket);
-    }
-
-    public TransferOperation get(List<Slot> craftingSlots, List<Slot> inventorySlots){
-
-
 
     }
 }

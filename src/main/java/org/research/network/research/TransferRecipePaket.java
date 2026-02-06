@@ -4,10 +4,7 @@ import mezz.jei.common.transfer.TransferOperation;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.inventory.Slot;
 import net.minecraftforge.network.NetworkEvent;
-import org.research.api.init.PacketInit;
-import org.research.api.util.ResearchApi;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
 

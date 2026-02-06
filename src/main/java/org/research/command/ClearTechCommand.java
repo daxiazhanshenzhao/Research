@@ -12,8 +12,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.research.Research;
-import org.research.api.tech.capability.ITechTreeCapability;
-import org.research.api.util.ResearchApi;
+import org.research.api.util.ResearchAPI;
 
 @Mod.EventBusSubscriber
 public class ClearTechCommand {
@@ -40,7 +39,7 @@ public class ClearTechCommand {
         CommandSourceStack source = context.getSource();
 
         // 获取玩家的科技数据并重置
-        ResearchApi.getTechTreeData(player).ifPresent(iTechTreeCapability -> {
+        ResearchAPI.getTechTreeData(player).ifPresent(iTechTreeCapability -> {
             iTechTreeCapability.resetAllTech();
         });
 

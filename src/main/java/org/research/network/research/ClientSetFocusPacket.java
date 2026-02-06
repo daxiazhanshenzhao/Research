@@ -3,8 +3,7 @@ package org.research.network.research;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkEvent;
-import org.research.api.init.TechInit;
-import org.research.api.util.ResearchApi;
+import org.research.api.util.ResearchAPI;
 
 import java.util.function.Supplier;
 
@@ -34,7 +33,7 @@ public class ClientSetFocusPacket {
             var sender = context.getSender();
             if (sender != null) {
                     // 获取玩家的科技树数据并设置聚焦
-                ResearchApi.getTechTreeData(sender).ifPresent(data -> {
+                ResearchAPI.getTechTreeData(sender).ifPresent(data -> {
                     data.focus(focusTechId);
                 });
 

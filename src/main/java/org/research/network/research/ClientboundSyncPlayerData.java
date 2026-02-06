@@ -31,7 +31,6 @@ public class ClientboundSyncPlayerData {
         context.enqueueWork(() -> {
             if (syncData != null) {
                 ClientResearchData.playerSyncedDataLookup.put(syncData.getPlayerId(), syncData);
-                // 清除 OverlayManager 的缓存，确保 Overlay 能实时显示最新数据
                 ClientResearchData.getOverlayManager().clearCache();
             }
         });

@@ -1,4 +1,4 @@
-package org.research.api.tech;
+package org.research.api.tech.capability;
 
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import org.research.api.init.PacketInit;
 import org.research.api.init.TechInit;
-import org.research.api.tech.capability.ITechTreeCapability;
+import org.research.api.tech.*;
 import org.research.api.util.Vec2i;
 import org.research.network.research.PlayTechSoundPacket;
 
@@ -28,7 +28,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     /**
      * only server - 服务端科技数据
      */
-    private Map<ResourceLocation,TechInstance> techMap = new HashMap<>();
+    private Map<ResourceLocation, TechInstance> techMap = new HashMap<>();
 
     private Map<ResourceLocation,Vec2i> vecMap = new HashMap<>();
     private int stage = 1;

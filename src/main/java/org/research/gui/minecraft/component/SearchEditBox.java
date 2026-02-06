@@ -2,14 +2,11 @@ package org.research.gui.minecraft.component;
 
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
-import org.research.Research;
 import org.research.api.gui.ClientScreenManager;
 import org.research.api.util.InsideContext;
-import org.research.gui.minecraft.ResearchContainerScreen;
 
 public class SearchEditBox extends EditBox implements IOpenRenderable{
 
