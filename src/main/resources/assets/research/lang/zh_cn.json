@@ -7,6 +7,7 @@
   "commands.research.open.success.other" : "为 %s 打开了研究界面",
   "commands.research.open.player_not_found": "未找到玩家",
 
-  "research.overlay.waiting_message": "手动追踪"
+  "research.overlay.waiting_message": "追踪科技",
+  "research.overlay.empty_focus_message": "选择科技"
 
 }

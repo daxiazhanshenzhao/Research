@@ -1,19 +1,14 @@
 package org.research.api.event.handle;
 
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TagsUpdatedEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.research.Research;
 import org.research.api.client.ClientResearchData;
-import org.research.api.recipe.category.CatalystsRegistration;
-import org.research.api.recipe.helper.ResearchPlugin;
+import org.research.api.recipe.ResearchPlugin;
 import org.research.api.util.ResearchPluginFinder;
 
 import java.util.List;

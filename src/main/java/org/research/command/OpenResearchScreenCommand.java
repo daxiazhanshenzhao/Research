@@ -12,7 +12,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.research.Research;
-import org.research.api.provider.ScreenProvider;
+import org.research.api.gui.ScreenProvider;
 
 @Mod.EventBusSubscriber
 public class OpenResearchScreenCommand {

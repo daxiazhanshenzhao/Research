@@ -7,8 +7,8 @@ import org.research.api.gui.MouseHandleBgData;
 import org.research.api.gui.layer.ClientOverlayManager;
 import org.research.api.init.PacketInit;
 import org.research.api.recipe.category.CatalystsRegistration;
-import org.research.api.recipe.helper.EmptyResearchPlugin;
-import org.research.api.recipe.helper.ResearchPlugin;
+import org.research.api.recipe.EmptyResearchPlugin;
+import org.research.api.recipe.ResearchPlugin;
 import org.research.api.tech.SyncData;
 import org.research.network.research.SendPacketPacket;
 

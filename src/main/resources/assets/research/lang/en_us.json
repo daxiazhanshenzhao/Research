@@ -7,6 +7,7 @@
   "commands.research.open.success.other" : "Opened research screen for %s",
   "commands.research.open.player_not_found": "Player not found",
 
-  "research.overlay.waiting_message": "Please manually track new technology"
+  "research.overlay.waiting_message": "Track Technology",
+  "research.overlay.empty_focus_message": "Select Technology"
 
 }

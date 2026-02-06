@@ -1,4 +1,4 @@
-package org.research.api.recipe.helper;
+package org.research.api.recipe;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -6,7 +6,7 @@ import org.research.Research;
 import org.research.api.recipe.category.CatalystsRegistration;
 import org.research.api.recipe.category.EmptyCategory;
 
-public class EmptyResearchPlugin implements ResearchPlugin{
+public class EmptyResearchPlugin implements ResearchPlugin {
 
     @Override
     public ResourceLocation getPluginId() {

@@ -6,8 +6,8 @@ import net.minecraftforge.forgespi.language.ModFileScanData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.Type;
-import org.research.api.recipe.category.AutoResearchPlugin;
-import org.research.api.recipe.helper.ResearchPlugin;
+import org.research.api.recipe.AutoResearchPlugin;
+import org.research.api.recipe.ResearchPlugin;
 
 import java.lang.reflect.Constructor;
 import java.util.*;

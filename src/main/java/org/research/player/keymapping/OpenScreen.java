@@ -8,7 +8,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 import org.research.api.init.KeyMappingInit;
-import org.research.api.provider.ScreenProvider;
+import org.research.api.gui.ScreenProvider;
 
 
 @Mod.EventBusSubscriber(value = Dist.CLIENT)

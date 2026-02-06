@@ -1,10 +1,12 @@
 package org.research.api.event.handle;
 
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.research.api.client.ClientResearchData;
 import org.research.api.event.custom.InventoryChangeEvent;
 import org.research.api.util.ResearchApi;
 
@@ -32,6 +34,10 @@ public class PlayerEventHandle {
             ResearchApi.getTechTreeData(serverPlayer).ifPresent(techTree -> {
                 techTree.tryComplete(event.getItem());
             });
+        }
+
+        if(event.getEntity() instanceof LocalPlayer clientPlayer) {
+
         }
 
     }

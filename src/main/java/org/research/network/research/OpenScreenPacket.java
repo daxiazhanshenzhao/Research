@@ -6,6 +6,7 @@ import net.minecraftforge.network.NetworkEvent;
 import org.research.api.client.ClientResearchData;
 import org.research.api.tech.SyncData;
 import org.research.gui.minecraft.ResearchScreen;
+import org.research.gui.minecraft.ResearchScreenV2;
 
 import java.util.function.Supplier;
 
@@ -33,14 +34,8 @@ public class OpenScreenPacket {
         ctx.get().setPacketHandled(true);
 
         ctx.get().enqueueWork(() -> {
-            // 先更新客户端缓存，确保数据可用
-            if (syncData != null) {
-                ClientResearchData.playerSyncedDataLookup.put(syncData.getPlayerId(), syncData);
-                System.out.println("[OpenScreenPacket] Updated client cache with playerId: " + syncData.getPlayerId() + ", cacheds size: " + syncData.getCacheds().size());
-            }
-
             // 然后打开屏幕
-            Minecraft.getInstance().setScreen(new ResearchScreen(syncData));
+            Minecraft.getInstance().setScreen(new ResearchScreenV2());
         });
 
         return true;

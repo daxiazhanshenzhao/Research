@@ -236,7 +236,7 @@ public class ClientScreenManager {
             // 配方页面打开时的区域：使用 RECIPE_PAGE_OPEN 的尺寸
             int recipeX = screenData.getGuiTextureWidth();
             int recipeY = screenData.getGuiTextureHeight();
-            int recipeWidth = InsideContext.RECIPE_PAGE_OPEN.width();
+            int recipeWidth = InsideContext.RECIPE_PAGE_OPEN.width()-15;
             int recipeHeight = InsideContext.RECIPE_PAGE_OPEN.height();
 
             return mouseX >= recipeX && mouseX < recipeX + recipeWidth &&

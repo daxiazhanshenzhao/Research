@@ -262,11 +262,38 @@ public class ClientOverlayManager {
     }
 
     /**
+     * 检查当前焦点科技是否为空（EMPTY）
+     * @return 如果焦点科技为空返回 true，否则返回 false
+     */
+    public boolean isFocusTechEmpty() {
+        var syncData = ClientResearchData.getSyncData();
+        if (syncData == null || syncData.getPlayerId() == -999) {
+            return true;
+        }
+
+        var focusTechId = syncData.getFocusTech();
+        if (focusTechId == null || focusTechId.equals(TechInstance.EMPTY.getIdentifier())) {
+            return true;
+        }
+
+        TechInstance focusTechInstance = syncData.getCacheds().get(focusTechId);
+        return focusTechInstance == null || focusTechInstance.isEmpty();
+    }
+
+    /**
      * 获取 WAITING 状态的提示消息
      * @return 本地化的提示消息
      */
     public Component getWaitingMessage() {
         return Component.translatable("research.overlay.waiting_message");
+    }
+
+    /**
+     * 获取焦点科技为空时的提示消息
+     * @return 本地化的提示消息
+     */
+    public Component getEmptyFocusMessage() {
+        return Component.translatable("research.overlay.empty_focus_message");
     }
 
     // ==================== 内部数据类 ====================

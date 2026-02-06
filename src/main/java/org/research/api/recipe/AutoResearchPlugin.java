@@ -1,4 +1,4 @@
-package org.research.api.recipe.category;
+package org.research.api.recipe;
 
 public @interface AutoResearchPlugin {
 }
