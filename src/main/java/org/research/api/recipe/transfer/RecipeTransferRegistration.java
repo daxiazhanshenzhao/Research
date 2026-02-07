@@ -2,11 +2,12 @@ package org.research.api.recipe.transfer;
 
 import lombok.Getter;
 import lombok.Setter;
-import mezz.jei.api.recipe.RecipeType;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.crafting.RecipeType;
 
 import java.util.HashMap;
+import java.util.HashSet;
 
 @Getter
 @Setter
@@ -15,23 +16,13 @@ public class RecipeTransferRegistration {
     private HashMap<RecipeType<?>,RecipeTransferBuilder<?,?>> builderMap = new HashMap<>();
     private HashMap<RecipeType<?>,RecipeTransferHandler<?,?>> handlerMap = new HashMap<>();
 
+    // HashSet缓存（用于MenuType高频渲染查询，O(1)查找性能）
+    private final HashSet<MenuType<?>> menuTypeCache = new HashSet<>();
 
-    private  RecipeTransferRegistration() {}
+    public RecipeTransferRegistration() {}
 
 
-    /**
-     * 连续性配方
-     * @param recipeType 配方类型
-     * @param containerClass 容器类
-     * @param menuType 菜单类型
-     * @param recipeSlotStart 配方槽起始位置
-     * @param recipeSlotCount 配方槽数量
-     * @param inventorySlotStart 物品栏起始位置
-     * @param inventorySlotCount 物品栏数量
-     * @param <C> 容器类型
-     * @param <R> 配方类型
-     */
-    public <C extends AbstractContainerMenu, R> void addRecipeTransferHandler(RecipeType<R> recipeType,
+    public <C extends AbstractContainerMenu, R> void addRecipeTransferHandler(RecipeType<?> recipeType,
                                          Class<? extends C> containerClass,MenuType<C> menuType,
                                          int recipeSlotStart, int recipeSlotCount,
                                          int inventorySlotStart, int inventorySlotCount){
@@ -40,19 +31,19 @@ public class RecipeTransferRegistration {
 
         builderMap.put(recipeType,transferBuilder);
         handlerMap.put(recipeType,handle);
+        menuTypeCache.add(menuType);
     }
 
-    /**
-     * 非连续性配方
-     * @param recipeType 配方类型
-     * @param builder 配方传输构建器
-     * @param <C> 容器类型
-     * @param <R> 配方类型
-     */
-    public <C extends AbstractContainerMenu, R> void addRecipeTransferHandler(RecipeType<R> recipeType,
+    public <C extends AbstractContainerMenu, R> void addRecipeTransferHandler(RecipeType<?> recipeType,
                                                                               RecipeTransferBuilder<C,R> builder){
         builderMap.put(recipeType,builder);
         handlerMap.put(recipeType,new RecipeTransferHandler<>(builder));
+        menuTypeCache.add(builder.getMenuType());
     }
+
+    public boolean containsMenuType(MenuType<?> menuType) {
+        return menuTypeCache.contains(menuType);
+    }
+
 
 }

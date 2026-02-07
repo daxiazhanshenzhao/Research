@@ -157,7 +157,7 @@ public class ResearchScreenV2 extends Screen {
         }
 
         // 清除所有 RecipeCategory 的槽位缓存，使得下次渲染时根据新的窗口坐标重新创建 RecipeTechSlot
-        ClientResearchData.recipeCategories.clearAllCache();
+        ClientResearchData.recipeCategoryData.clearAllCache();
 
     }
     public void tick() {
@@ -386,7 +386,7 @@ public class ResearchScreenV2 extends Screen {
         }
 
         var recipeWrapper = techSlot.getTechInstance().getRecipe();
-        RecipeCategory<?> categories = ClientResearchData.recipeCategories.getRecipeCategories().get(recipeWrapper.type());
+        RecipeCategory<?> categories = ClientResearchData.recipeCategoryData.getRecipeCategories().get(recipeWrapper.type());
 
         categories.render(context, tWidth, tHeight,techSlot.getRecipe(),mouseX,mouseY,partialTick);
 
@@ -401,7 +401,7 @@ public class ResearchScreenV2 extends Screen {
                 var techSlot = manager.getTechSlotData().getFocusTechSlot();
                 if (!techSlot.equals(TechSlot.EMPTY)) {
                     var recipeWrapper = techSlot.getTechInstance().getRecipe();
-                    RecipeCategory<?> categories = ClientResearchData.recipeCategories.getRecipeCategories().get(recipeWrapper.type());
+                    RecipeCategory<?> categories = ClientResearchData.recipeCategoryData.getRecipeCategories().get(recipeWrapper.type());
                     var tWidth = manager.getScreenData().getGuiTextureWidth();
                     var tHeight = manager.getScreenData().getGuiTextureHeight();
                     categories.renderTooltips(context, tWidth, tHeight, techSlot.getRecipe(), screenMouseX, screenMouseY);

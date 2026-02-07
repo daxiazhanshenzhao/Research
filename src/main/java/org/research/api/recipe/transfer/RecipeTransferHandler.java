@@ -20,9 +20,11 @@ public class RecipeTransferHandler<C extends AbstractContainerMenu, R> {
     }
 
 
-    public void transferRecipe(C container, R recipe, LocalPlayer player) {
+    public RecipeResult transferRecipe(C container, R recipe, LocalPlayer player) {
 
 
 
+
+        return RecipeResult.UNKNOWN_ERROR;
     }
 }

@@ -1,9 +1,9 @@
 package org.research.network.recipe;
 
-import mezz.jei.common.transfer.TransferOperation;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.inventory.Slot;
 import net.minecraftforge.network.NetworkEvent;
+import org.research.api.recipe.transfer.TransferOperation;
 
 import java.util.List;
 import java.util.function.Supplier;

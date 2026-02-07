@@ -28,10 +28,14 @@ public class ClientPluginHandle {
     @SubscribeEvent
     public static void onTagsUpdated(TagsUpdatedEvent event) {
 
-        List<ResearchPlugin> plugins =  ResearchPluginFinder.getModPlugins();
-        var registration = ClientResearchData.recipeCategories;
+        List<ResearchPlugin> plugins = ResearchPluginFinder.getModPlugins();
+        var registration = ClientResearchData.recipeCategoryData;
+        var recipeTransfer = ClientResearchData.transferData;
         for (ResearchPlugin plugin : plugins) {
+
             plugin.registerRecipeCategories(registration);
+            plugin.registerRecipeTransfer(recipeTransfer);
+
             ClientResearchData.recipePluginData.add(plugin);
             Research.LOGGER.info("正在加载来自模组 {} 的研究配方插件 {}", plugin.getPluginId(), plugin.getClass().getName());
         }

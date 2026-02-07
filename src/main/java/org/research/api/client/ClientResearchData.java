@@ -4,13 +4,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import org.research.api.gui.ClientScreenManager;
 import org.research.api.gui.layer.ClientOverlayManager;
-import org.research.api.init.PacketInit;
 import org.research.api.inventory.ClientInventoryData;
 import org.research.api.recipe.category.CatalystsRegistration;
 import org.research.api.recipe.EmptyResearchPlugin;
 import org.research.api.recipe.ResearchPlugin;
+import org.research.api.recipe.transfer.RecipeTransferRegistration;
 import org.research.api.tech.SyncData;
-import org.research.network.research.SendPacketPacket;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,7 +41,8 @@ public class ClientResearchData {
     }
 
     //实际用于显示的配方
-    public static final CatalystsRegistration recipeCategories = new CatalystsRegistration();
+    public static final CatalystsRegistration recipeCategoryData = new CatalystsRegistration();
+    public static final RecipeTransferRegistration transferData = new RecipeTransferRegistration();
 
     private static ClientOverlayManager overlayManager;
 

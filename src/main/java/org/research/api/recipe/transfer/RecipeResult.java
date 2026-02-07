@@ -14,6 +14,7 @@ public enum RecipeResult {
      * 成功：配方转移成功
      */
     SUCCESS(0,"recipe.transfer.success"),
+
     /**
      * 缺少材料：玩家背包中没有足够的材料
      */
@@ -23,6 +24,7 @@ public enum RecipeResult {
      * 容器不匹配：当前打开的容器与配方要求的容器不匹配
      */
     CONTAINER_MISMATCH(2,"recipe.transfer.container_mismatch"),
+
     /**
      * 槽位被占用：目标槽位已经有物品，无法放置
      */

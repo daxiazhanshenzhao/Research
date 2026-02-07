@@ -1,6 +1,8 @@
 package org.research.gui.minecraft;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
@@ -16,7 +18,7 @@ import java.util.List;
  * 负责在游戏界面上渲染配方信息的覆盖层
  * 所有的计算逻辑都委托给 ClientOverlayManager 处理
  */
-public class ResearchOverlay implements IGuiOverlay {
+public class ResearchOverlay implements IGuiOverlay, GuiEventListener {
 
     /** 单例实例 */
     public static ResearchOverlay instance = new ResearchOverlay();
@@ -33,8 +35,13 @@ public class ResearchOverlay implements IGuiOverlay {
      */
     @Override
     public void render(ForgeGui gui, GuiGraphics guiGraphics, float partialTick, int screenWidth, int screenHeight) {
-        int width = gui.getMinecraft().getWindow().getGuiScaledWidth();
-        int height = gui.getMinecraft().getWindow().getGuiScaledHeight();
+
+        render(guiGraphics);
+    }
+
+    public void render(GuiGraphics guiGraphics){
+        int width = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        int height = Minecraft.getInstance().getWindow().getGuiScaledHeight();
 
         // 从 manager 获取计算好的坐标
         int guiLeft = manager.getOverlayLeft(width);
@@ -44,7 +51,6 @@ public class ResearchOverlay implements IGuiOverlay {
         renderFrame(guiGraphics, guiLeft, guiTop);
         renderRecipeText(guiGraphics, guiLeft, guiTop);
     }
-
     /**
      * 渲染框架（三段式：起始、中心、结束）
      * 框架靠在屏幕右侧，使用动态高度
@@ -218,5 +224,15 @@ public class ResearchOverlay implements IGuiOverlay {
                 false
             );
         }
+    }
+
+    @Override
+    public void setFocused(boolean focused) {
+
+    }
+
+    @Override
+    public boolean isFocused() {
+        return false;
     }
 }

@@ -432,7 +432,7 @@ public class ClientOverlayManager {
         }
 
         // 获取对应的 RecipeCategory
-        var categoryMap = ClientResearchData.recipeCategories.getRecipeCategories();
+        var categoryMap = ClientResearchData.recipeCategoryData.getRecipeCategories();
         RecipeCategory<?> category = categoryMap.get(recipe.getType());
         if (category == null) {
             return null;

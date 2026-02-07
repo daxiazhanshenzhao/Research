@@ -13,7 +13,9 @@ public class OverlayInit {
 
     @SubscribeEvent
     public static void onRegisterOverlays(RegisterGuiOverlaysEvent event) {
-        event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "research_overlay", ResearchOverlay.instance);
+        // 注册在 CHAT_PANEL 之上，确保优先级高于大多数Screen和GUI元素
+        // 这样可以确保研究覆盖层始终显示在最前面
+        event.registerAbove(VanillaGuiOverlay.CHAT_PANEL.id(), "research_overlay", ResearchOverlay.instance);
     }
 
 }

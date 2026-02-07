@@ -1,6 +1,5 @@
 package org.research.api.recipe;
 
-import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.resources.ResourceLocation;
 import org.research.api.recipe.category.CatalystsRegistration;
 import org.research.api.recipe.transfer.RecipeTransferRegistration;
