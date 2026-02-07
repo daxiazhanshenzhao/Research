@@ -6,11 +6,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.MinecraftForge;
-import org.research.api.event.custom.ChangeTechStageEvent;
 import org.research.api.init.TechInit;
-import org.research.api.recipe.IRecipe;
+import org.research.api.util.RecipeUtil;
 import org.research.api.recipe.RecipeWrapper;
+import org.research.api.tech.capability.ITechTreeManager;
 
 import java.util.List;
 import java.util.Objects;
@@ -45,21 +44,37 @@ public class TechInstance implements Comparable<TechInstance> {
         this.focused = focused;
     }
 
+    /**
+     * 设置科技状态（内部方法，不触发事件）
+     * 事件触发在 TechTreeManager 中统一处理
+     * @param state 新的科技状态
+     */
     public void setTechState(TechState state) {
-
-        ChangeTechStageEvent event = new ChangeTechStageEvent(getState(),state,this, serverPlayer);
-        if (this.serverPlayer == null || !MinecraftForge.EVENT_BUS.post(event)) {
-            this.stateValue = event.getNewState().getValue();
-        }
-        if (this.serverPlayer != null ){
-            this.stateValue = event.getNewState().getValue();
-        }
-
+        this.stateValue = state.getValue();
     }
 
+    /**
+     * 设置科技焦点状态（内部方法，不触发事件）
+     * 事件触发在 TechTreeManager 中统一处理
+     * @param focused 新的焦点状态
+     */
+    public void setFocused(boolean focused) {
+        this.focused = focused;
+    }
+
+    /**
+     * 获取当前科技状态
+     * @return 当前科技状态
+     */
     public TechState getState() {
         return getState(stateValue);
     }
+
+    /**
+     * 根据状态值获取科技状态枚举
+     * @param stateValue 状态值
+     * @return 对应的科技状态枚举
+     */
     public TechState getState(int stateValue) {
         for (TechState type : TechState.values()) {
             if (type.getValue() == stateValue) {
@@ -67,10 +82,6 @@ public class TechInstance implements Comparable<TechInstance> {
             }
         }
         return TechState.LOCKED;
-    }
-
-    public void setFocused(boolean focused) {
-        this.focused = focused;
     }
 
     public AbstractTech getTech() {
@@ -93,13 +104,13 @@ public class TechInstance implements Comparable<TechInstance> {
      * </p>
      * <p>
      * <b>注意：</b>该方法返回的是当前科技实例的父节点，如果需要获取其他科技的父节点，
-     * 请使用 {@link org.research.api.tech.capability.ITechTreeCapability#getParents(AbstractTech)}。
+     * 请使用 {@link ITechTreeManager#getParents(AbstractTech)}。
      * </p>
      *
      * @return 包含所有父节点资源位置的列表。如果科技没有父节点，返回空列表。
      *         列表中的顺序与 {@link TechBuilder} 中添加的顺序一致。
      *
-     * @see org.research.api.tech.capability.ITechTreeCapability#getParents(AbstractTech)
+     * @see ITechTreeManager#getParents(AbstractTech)
      * @see TechBuilder#parent
      * @see ResourceLocation
      */
@@ -177,7 +188,7 @@ public class TechInstance implements Comparable<TechInstance> {
     public ItemStack getRecipeOutput() {
         var recipeWrapperData = getRecipe();
         var registryAccess = serverPlayer.server.registryAccess();
-        var recipe = IRecipe.getRecipeFromWrapper(recipeWrapperData, serverPlayer.server);
+        var recipe = RecipeUtil.getServerRecipe(recipeWrapperData, serverPlayer.server);
         if (recipe != null) {
             return recipe.getResultItem(registryAccess);
         }else {

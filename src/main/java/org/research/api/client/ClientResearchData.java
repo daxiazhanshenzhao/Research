@@ -5,6 +5,7 @@ import net.minecraft.client.player.LocalPlayer;
 import org.research.api.gui.ClientScreenManager;
 import org.research.api.gui.layer.ClientOverlayManager;
 import org.research.api.init.PacketInit;
+import org.research.api.inventory.ClientInventoryData;
 import org.research.api.recipe.category.CatalystsRegistration;
 import org.research.api.recipe.EmptyResearchPlugin;
 import org.research.api.recipe.ResearchPlugin;
@@ -52,6 +53,14 @@ public class ClientResearchData {
         return overlayManager;
     }
 
+    public static ClientInventoryData clientInventoryData;
+
+    public static ClientInventoryData getClientInventoryData() {
+        if (clientInventoryData == null) {
+            clientInventoryData = new ClientInventoryData();
+        }
+        return clientInventoryData;
+    }
 
     private static ClientScreenManager screenManager;
 

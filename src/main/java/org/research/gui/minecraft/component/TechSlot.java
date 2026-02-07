@@ -11,7 +11,7 @@ import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
-import org.research.api.recipe.IRecipe;
+import org.research.api.util.RecipeUtil;
 import org.research.api.tech.TechInstance;
 import org.research.api.util.BlitContext;
 import org.research.api.util.Texture;
@@ -133,7 +133,7 @@ public class TechSlot extends AbstractButton {
             return;
         }
 
-        var recipe = IRecipe.getClientRecipe(tech.getRecipe(), minecraft);
+        var recipe = RecipeUtil.getClientRecipe(tech.getRecipe(), minecraft);
         if (recipe == null) {
             return;
         }
@@ -170,7 +170,7 @@ public class TechSlot extends AbstractButton {
     }
 
     public Recipe<?> getRecipe(){
-        return IRecipe.getClientRecipe(tech.getRecipe(), Minecraft.getInstance());
+        return RecipeUtil.getClientRecipe(tech.getRecipe(), Minecraft.getInstance());
     }
 
     /**

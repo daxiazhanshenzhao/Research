@@ -8,6 +8,16 @@
   "commands.research.open.player_not_found": "Player not found",
 
   "research.overlay.waiting_message": "Track Technology",
-  "research.overlay.empty_focus_message": "Select Technology"
+  "research.overlay.empty_focus_message": "Select Technology",
+  "research.overlay.select_recipe_message": "Select New Recipe",
+
+  "recipe.transfer.success": "Recipe transferred successfully",
+  "recipe.transfer.missing_workbench": "Missing required workbench",
+  "recipe.transfer.missing_materials": "Insufficient materials",
+  "recipe.transfer.container_mismatch": "Wrong container type",
+  "recipe.transfer.recipe_unavailable": "Recipe is not available",
+  "recipe.transfer.slots_occupied": "Target slots are occupied",
+  "recipe.transfer.inventory_full": "Inventory is full",
+  "recipe.transfer.unknown_error": "Unknown error occurred"
 
 }

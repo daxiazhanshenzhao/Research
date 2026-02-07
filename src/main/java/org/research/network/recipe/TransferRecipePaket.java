@@ -1,4 +1,4 @@
-package org.research.network.research;
+package org.research.network.recipe;
 
 import mezz.jei.common.transfer.TransferOperation;
 import net.minecraft.network.FriendlyByteBuf;

@@ -7,7 +7,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import org.research.Research;
-import org.research.api.recipe.IRecipe;
+import org.research.api.util.RecipeUtil;
 import org.research.api.recipe.RecipeIngredientRole;
 import org.research.api.recipe.category.RecipeCategory;
 
@@ -95,7 +95,7 @@ public class CraftingTableCategory extends RecipeCategory<CraftingRecipe> {
         }
 
         // 配置输出槽位
-        ItemStack resultItem = IRecipe.getResultItem(recipe);
+        ItemStack resultItem = RecipeUtil.getResultItem(recipe);
         builder.addSlot(100, OUTPUT_X, OUTPUT_Y, RecipeIngredientRole.OUTPUT)
                 .addItems(List.of(resultItem))
                 .setSlotBackGround(Default_Slot_Background);

@@ -1,9 +1,8 @@
-package org.research.network.research;
+package org.research.network.gui;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import org.research.api.tech.SyncData;
 import org.research.gui.minecraft.ResearchScreenV2;
 
 import java.util.function.Supplier;

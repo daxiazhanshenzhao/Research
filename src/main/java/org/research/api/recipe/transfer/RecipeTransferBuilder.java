@@ -2,18 +2,12 @@ package org.research.api.recipe.transfer;
 
 import lombok.Getter;
 import lombok.Setter;
-import mezz.jei.api.recipe.RecipeType;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import org.research.api.init.PacketInit;
-import org.research.network.research.TransferRecipePaket;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Getter
 @Setter

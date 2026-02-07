@@ -2,7 +2,7 @@ package org.research.network.research;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import org.research.api.tech.capability.ITechTreeCapability;
+import org.research.api.tech.capability.ITechTreeManager;
 import org.research.api.util.ResearchAPI;
 
 import java.util.function.Supplier;
@@ -26,7 +26,7 @@ public class ClientClearFocusPacket {
         context.enqueueWork(() -> {
             if (context.getSender() != null) {
                 var player = context.getSender();
-                ResearchAPI.getTechTreeData(player).ifPresent(ITechTreeCapability::clearFocus);
+                ResearchAPI.getTechTreeData(player).ifPresent(ITechTreeManager::clearFocus);
             }
         });
         return true;

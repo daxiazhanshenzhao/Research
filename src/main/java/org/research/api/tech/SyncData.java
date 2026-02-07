@@ -10,7 +10,7 @@ import net.minecraft.network.syncher.EntityDataSerializer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import org.research.api.init.PacketInit;
-import org.research.api.tech.capability.PlayerTechTreeData;
+import org.research.api.tech.capability.TechTreeManager;
 import org.research.api.util.Vec2i;
 import org.research.network.research.ClientboundSyncPlayerData;
 
@@ -42,7 +42,7 @@ public class SyncData {
 
     }
 
-    public SyncData(PlayerTechTreeData treeData) {
+    public SyncData(TechTreeManager treeData) {
         this(treeData.getPlayer());
         // 直接使用 techMap 创建缓存的副本，避免引用同一个对象
         this.cacheds = new HashMap<>(treeData.getTechMap());

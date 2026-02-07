@@ -14,7 +14,7 @@ import org.research.api.util.Vec2i;
 import java.util.List;
 import java.util.Map;
 
-public interface ITechTreeCapability<T> {
+public interface ITechTreeManager<T> {
 
 
     /**

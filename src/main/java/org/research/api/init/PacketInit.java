@@ -8,6 +8,8 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 import org.research.Research;
+import org.research.network.InventoryChangePaket;
+import org.research.network.gui.OpenScreenPacket;
 import org.research.network.research.*;
 
 @Mod.EventBusSubscriber
@@ -48,6 +50,13 @@ public class PacketInit {
                 .decoder(PlayTechSoundPacket::new)
                 .encoder(PlayTechSoundPacket::toBytes)
                 .consumerMainThread(PlayTechSoundPacket::handle)
+                .add();
+
+        // ✅ 注册背包变化包（服务端 -> 客户端）
+        net.messageBuilder(InventoryChangePaket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(InventoryChangePaket::decode)
+                .encoder(InventoryChangePaket::encode)
+                .consumerMainThread(InventoryChangePaket::handle)
                 .add();
 
         //client -> server

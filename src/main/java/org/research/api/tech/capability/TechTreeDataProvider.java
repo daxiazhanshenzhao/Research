@@ -21,8 +21,8 @@ import javax.annotation.Nullable;
 public class TechTreeDataProvider implements ICapabilitySerializable<CompoundTag> {
 
     // 直接持有实例而不是用 Supplier
-    private final PlayerTechTreeData data;
-    private final LazyOptional<ITechTreeCapability> lazyOptional;
+    private final TechTreeManager data;
+    private final LazyOptional<ITechTreeManager> lazyOptional;
 
     //techData
     public static final String TREE_DATA = Research.MODID + "tree_data";
@@ -39,7 +39,7 @@ public class TechTreeDataProvider implements ICapabilitySerializable<CompoundTag
 
     public TechTreeDataProvider(ServerPlayer player) {
         // 在构造时就创建实例，而不是每次调用时创建
-        this.data = new PlayerTechTreeData(player);
+        this.data = new TechTreeManager(player);
         this.lazyOptional = LazyOptional.of(() -> data);
     }
 
@@ -73,8 +73,8 @@ public class TechTreeDataProvider implements ICapabilitySerializable<CompoundTag
             oldPlayer.revive();
 
             if (oldPlayer instanceof ServerPlayer && newPlayer instanceof ServerPlayer) {
-                LazyOptional<ITechTreeCapability> oldCap = ResearchAPI.getTechTreeData((ServerPlayer) oldPlayer);
-                LazyOptional<ITechTreeCapability> newCap = ResearchAPI.getTechTreeData((ServerPlayer) newPlayer);
+                LazyOptional<ITechTreeManager> oldCap = ResearchAPI.getTechTreeData((ServerPlayer) oldPlayer);
+                LazyOptional<ITechTreeManager> newCap = ResearchAPI.getTechTreeData((ServerPlayer) newPlayer);
 
                 oldCap.ifPresent(oldC ->
                         newCap.ifPresent(newC->{

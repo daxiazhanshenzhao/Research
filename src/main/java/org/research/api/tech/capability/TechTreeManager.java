@@ -10,6 +10,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.common.MinecraftForge;
+import org.research.api.event.custom.ChangeTechFocusedEvent;
+import org.research.api.event.custom.ChangeTechStageEvent;
+import org.research.api.event.custom.CompleteTechEvent;
 import org.research.api.init.PacketInit;
 import org.research.api.init.TechInit;
 import org.research.api.tech.*;
@@ -21,7 +25,7 @@ import java.util.*;
 import static org.research.api.tech.capability.TechTreeDataProvider.*;
 
 //只在服务端控制
-public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeData> {
+public class TechTreeManager implements ITechTreeManager<TechTreeManager> {
 
     private ServerPlayer player;
 
@@ -43,7 +47,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
      */
     private SyncData cachedSyncData = null;
 
-    public PlayerTechTreeData(ServerPlayer player) {
+    public TechTreeManager(ServerPlayer player) {
 //        super(TechInit.getAllTech().size());
         this.player = player;
 //        current = getCurrent();
@@ -52,7 +56,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     }
 
     // 用于反序列化的构造函数，不调用 initTechSlot()
-    public PlayerTechTreeData(Map<ResourceLocation,TechInstance> techMap,Map<ResourceLocation,Vec2i> vecMap,int stage) {
+    public TechTreeManager(Map<ResourceLocation,TechInstance> techMap, Map<ResourceLocation,Vec2i> vecMap, int stage) {
         this.player = null;
         this.techMap = techMap;
         this.vecMap = vecMap;
@@ -99,7 +103,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     }
 
     @Override
-    public PlayerTechTreeData addTech(AbstractTech tech, int x, int y) {
+    public TechTreeManager addTech(AbstractTech tech, int x, int y) {
         if (techMap.containsKey(tech.getIdentifier())) return this;
 
         var techInstance = new TechInstance(tech,player);
@@ -120,7 +124,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
 
     @Override
-    public PlayerTechTreeData removeTech(AbstractTech tech) {
+    public TechTreeManager removeTech(AbstractTech tech) {
         if (techMap.containsKey(tech.getIdentifier())) {
             techMap.remove(tech.getIdentifier());
             vecMap.remove(tech.getIdentifier());
@@ -128,11 +132,97 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
         return this;
     }
 
+    // ==================== 带事件触发的状态修改方法 ====================
+
+    /**
+     * 修改科技状态（带事件触发）
+     * 触发 ChangeTechStageEvent 事件，可以被取消或修改
+     *
+     * @param techInstance 科技实例
+     * @param newState 新的科技状态
+     * @return 是否成功修改（false 表示事件被取消）
+     */
+    public boolean changeTechStateWithEvent(TechInstance techInstance, TechState newState) {
+        if (techInstance == null || player == null) {
+            return false;
+        }
+
+        TechState oldState = techInstance.getState();
+
+        // 触发事件
+        ChangeTechStageEvent event = new ChangeTechStageEvent(oldState, newState, techInstance, player);
+        if (MinecraftForge.EVENT_BUS.post(event)) {
+            // 事件被取消
+            return false;
+        }
+
+        // 应用事件中可能被修改的状态
+        techInstance.setTechState(event.getNewState());
+        return true;
+    }
+
+    /**
+     * 修改科技焦点状态（带事件触发）
+     * 触发 ChangeTechFocused 事件，可以被取消或修改
+     *
+     * @param techInstance 科技实例
+     * @param newFocused 新的焦点状态
+     * @return 是否成功修改（false 表示事件被取消）
+     */
+    public boolean changeTechFocusedWithEvent(TechInstance techInstance, boolean newFocused) {
+        if (techInstance == null || player == null) {
+            return false;
+        }
+
+        boolean oldFocused = techInstance.isFocused();
+
+        // 触发事件
+        ChangeTechFocusedEvent event = new ChangeTechFocusedEvent(oldFocused, newFocused, techInstance, player);
+        if (MinecraftForge.EVENT_BUS.post(event)) {
+            // 事件被取消
+            return false;
+        }
+
+        // 应用事件中可能被修改的焦点状态（boolean 字段 Lombok 生成的是 isNewFocused()）
+        techInstance.setFocused(event.isNewFocused());
+        return true;
+    }
+
+    /**
+     * 完成科技（带事件触发）
+     * 触发 CompleteTechEvent 事件，可以被取消或修改完成后的状态
+     *
+     * @param techInstance 科技实例
+     * @param completedState 完成后的状态（通常是 COMPLETED 或 WAITING）
+     * @return 是否成功完成（false 表示事件被取消）
+     */
+    public boolean completeTechWithEvent(TechInstance techInstance, TechState completedState) {
+        if (techInstance == null || player == null) {
+            return false;
+        }
+
+        TechState oldState = techInstance.getState();
+
+        // 触发事件
+        CompleteTechEvent event = new CompleteTechEvent(oldState, completedState, techInstance, player);
+        if (MinecraftForge.EVENT_BUS.post(event)) {
+            // 事件被取消
+            return false;
+        }
+
+        // 应用事件中可能被修改的状态
+        techInstance.setTechState(event.getNewState());
+        return true;
+    }
+
+    // ==================== 原有方法 ====================
+
     @Override
     public void changeTech(AbstractTech target, TechState state) {
         var instance = techMap.getOrDefault(target.getIdentifier(), null);
         if (instance != null) {
-            instance.setTechState(state);
+            // 使用带事件触发的方法
+            changeTechStateWithEvent(instance, state);
         }
     }
 
@@ -163,12 +253,12 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
 
                     boolean isWaiting = false;
                     if (children.size() > 1) {
-                        // 有多个子节点：设置为 WAITING 状态，等待玩家选择
-                        tech.setTechState(TechState.WAITING);
+                        // 有多个子节点：设置为 WAITING 状态，等待玩家选择（带事件触发）
+                        completeTechWithEvent(tech, TechState.WAITING);
                         isWaiting = true;
                     } else {
-                        // 只有一个或没有子节点：设置为 COMPLETED 状态
-                        tech.setTechState(TechState.COMPLETED);
+                        // 只有一个或没有子节点：设置为 COMPLETED 状态（带事件触发）
+                        completeTechWithEvent(tech, TechState.COMPLETED);
                     }
                     playerSound();
                     // 播放科技完成音效
@@ -230,8 +320,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
         if (instance.getState().equals(TechState.COMPLETED)) {
             List<ResourceLocation> children = getChildren(instance.getTech());
             if (children.size() > 1) {
-                // 有多个子节点，将科技变回 WAITING 状态，允许玩家重新选择分支
-                instance.setTechState(TechState.WAITING);
+                // 有多个子节点，将科技变回 WAITING 状态，允许玩家重新选择分支（带事件触发）
+                changeTechStateWithEvent(instance, TechState.WAITING);
                 player.sendSystemMessage(Component.literal("Tech has multiple branches. Choose your path."));
             }
         }
@@ -242,8 +332,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
             clearWaiting();
         }
 
-        // 设置焦点
-        instance.setFocused(true);
+        // 设置焦点（带事件触发）
+        changeTechFocusedWithEvent(instance, true);
         player.sendSystemMessage(Component.literal("Focused on tech: " + techId.toString()));
 
     }
@@ -251,7 +341,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     private void clearWaiting() {
         for (var techInstance : techMap.values()) {
             if (techInstance.getState().equals(TechState.WAITING)) {
-                techInstance.setTechState(TechState.COMPLETED);
+                // 使用带事件触发的方法
+                changeTechStateWithEvent(techInstance, TechState.COMPLETED);
             }
         }
     }
@@ -276,9 +367,9 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
         for (ResourceLocation childId : children) {
             TechInstance childInstance = techMap.get(childId);
             if (childInstance != null && childInstance.getState() == TechState.AVAILABLE) {
-                // 找到可用的子节点，自动聚焦
+                // 找到可用的子节点，自动聚焦（带事件触发）
                 clearFocus();
-                childInstance.setFocused(true);
+                changeTechFocusedWithEvent(childInstance, true);
                 player.sendSystemMessage(Component.literal("Auto-focused on next tech: " + childId.toString()));
                 return;
             }
@@ -288,9 +379,9 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
         for (ResourceLocation childId : children) {
             TechInstance childInstance = techMap.get(childId);
             if (childInstance != null && childInstance.getState() == TechState.WAITING) {
-                // 找到等待中的子节点，自动聚焦
+                // 找到等待中的子节点，自动聚焦（带事件触发）
                 clearFocus();
-                childInstance.setFocused(true);
+                changeTechFocusedWithEvent(childInstance, true);
                 player.sendSystemMessage(Component.literal("Auto-focused on waiting tech: " + childId.toString()));
                 return;
             }
@@ -304,10 +395,10 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     public void clearFocus() {
         for (var techInstance : techMap.values()) {
             if (techInstance.isFocused()) {
-                techInstance.setFocused(false);
+                // 使用带事件触发的方法
+                changeTechFocusedWithEvent(techInstance, false);
             }
         }
-
 
     }
 
@@ -334,7 +425,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
             if (childInstance != null && childInstance.getState() == TechState.LOCKED) {
                 // 检查子节点的所有前置科技是否都已完成
                 if (areAllParentsCompleted(childInstance)) {
-                    childInstance.setTechState(TechState.AVAILABLE);
+                    // 使用带事件触发的方法
+                    changeTechStateWithEvent(childInstance, TechState.AVAILABLE);
                     syncStage(childInstance.getTech());
                     // 自动聚焦到新解锁的子节点
                     focus(childId);
@@ -352,7 +444,8 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
                 if (childInstance != null && childInstance.getState() == TechState.LOCKED) {
                     // 检查子节点的所有前置科技是否都已完成
                     if (areAllParentsCompleted(childInstance)) {
-                        childInstance.setTechState(TechState.AVAILABLE);
+                        // 使用带事件触发的方法
+                        changeTechStateWithEvent(childInstance, TechState.AVAILABLE);
                         syncStage(childInstance.getTech());
                         // 自动聚焦到第一个解锁的子节点
                         if (!firstUnlocked) {
@@ -591,12 +684,12 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     }
 
 
-    public static final Codec<PlayerTechTreeData> CODEC = RecordCodecBuilder.create(instance ->
+    public static final Codec<TechTreeManager> CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-                Codec.unboundedMap(ResourceLocation.CODEC, TechInstance.CODEC).fieldOf(CACHEDs).forGetter(PlayerTechTreeData::getTechMap),
-                Codec.unboundedMap(ResourceLocation.CODEC, Vec2i.CODEC).fieldOf(VEC).forGetter(PlayerTechTreeData::getVecMap),
-                Codec.INT.fieldOf(STAGE).forGetter(PlayerTechTreeData::getStage)
-        ).apply(instance,PlayerTechTreeData::new));
+                Codec.unboundedMap(ResourceLocation.CODEC, TechInstance.CODEC).fieldOf(CACHEDs).forGetter(TechTreeManager::getTechMap),
+                Codec.unboundedMap(ResourceLocation.CODEC, Vec2i.CODEC).fieldOf(VEC).forGetter(TechTreeManager::getVecMap),
+                Codec.INT.fieldOf(STAGE).forGetter(TechTreeManager::getStage)
+        ).apply(instance, TechTreeManager::new));
 
 
 
@@ -614,7 +707,7 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     @Override
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
-        var dataResult = PlayerTechTreeData.CODEC.encodeStart(NbtOps.INSTANCE, this);
+        var dataResult = TechTreeManager.CODEC.encodeStart(NbtOps.INSTANCE, this);
 
         dataResult.result().ifPresent(nbt->{
             tag.put(TREE_DATA, nbt);
@@ -629,16 +722,16 @@ public class PlayerTechTreeData implements ITechTreeCapability<PlayerTechTreeDat
     public void deserializeNBT(CompoundTag compoundTag) {
         Tag dataResult = compoundTag.get(TREE_DATA);
         if (dataResult != null) {
-            var a = PlayerTechTreeData.CODEC.parse(NbtOps.INSTANCE, dataResult);
-            a.result().ifPresent(playerTechTreeData -> {
-                Map<ResourceLocation, TechInstance> loadedTechMap = playerTechTreeData.getTechMap();
+            var a = TechTreeManager.CODEC.parse(NbtOps.INSTANCE, dataResult);
+            a.result().ifPresent(playerTechTreeManager -> {
+                Map<ResourceLocation, TechInstance> loadedTechMap = playerTechTreeManager.getTechMap();
 
                 // 如果加载的数据不为空，则使用加载的数据
                 if (loadedTechMap != null && !loadedTechMap.isEmpty()) {
                     // 创建新的可变 HashMap，避免不可变集合导致的 UnsupportedOperationException
                     this.techMap = new HashMap<>(loadedTechMap);
-                    this.vecMap = new HashMap<>(playerTechTreeData.getVecMap());
-                    this.stage = playerTechTreeData.getStage();
+                    this.vecMap = new HashMap<>(playerTechTreeManager.getVecMap());
+                    this.stage = playerTechTreeManager.getStage();
 
                     // 重新关联 player 到所有 TechInstance
                     if (this.player != null) {

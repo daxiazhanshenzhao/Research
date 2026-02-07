@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.research.api.client.ClientResearchData;
 import org.research.api.event.custom.InventoryChangeEvent;
 import org.research.api.util.ResearchAPI;
 
@@ -34,11 +35,13 @@ public class PlayerEventHandle {
             });
         }
 
-        if(event.getEntity() instanceof LocalPlayer clientPlayer) {
+        if (event.getEntity() instanceof LocalPlayer player) {
+            ClientResearchData.getClientInventoryData().updateInventoryData();
+            ClientResearchData.getOverlayManager().clearCache();
 
         }
-
     }
+
 
 
 }

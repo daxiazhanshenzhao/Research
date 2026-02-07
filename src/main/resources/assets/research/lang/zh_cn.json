@@ -8,6 +8,16 @@
   "commands.research.open.player_not_found": "未找到玩家",
 
   "research.overlay.waiting_message": "追踪科技",
-  "research.overlay.empty_focus_message": "选择科技"
+  "research.overlay.empty_focus_message": "选择科技",
+  "research.overlay.select_recipe_message": "选择新配方",
+
+  "recipe.transfer.success": "配方转移成功",
+  "recipe.transfer.missing_workbench": "缺少所需工作台",
+  "recipe.transfer.missing_materials": "材料不足",
+  "recipe.transfer.container_mismatch": "容器类型不匹配",
+  "recipe.transfer.recipe_unavailable": "配方不可用",
+  "recipe.transfer.slots_occupied": "目标槽位已被占用",
+  "recipe.transfer.inventory_full": "背包已满",
+  "recipe.transfer.unknown_error": "发生未知错误"
 
 }
